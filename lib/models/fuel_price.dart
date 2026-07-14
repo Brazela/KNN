@@ -36,8 +36,11 @@ class FuelPrice {
   final double diesel;
 
   /// Price of diesel in East Malaysia in MYR per litre.
+  ///
+  /// May be `null` in recent records where the government no longer sets a
+  /// separate price for East Malaysia.
   @JsonKey(name: 'diesel_eastmsia')
-  final double dieselEastMsia;
+  final double? dieselEastMsia;
 
   /// RON95 price for SKPS, if available.
   final double? ron95Skps;

@@ -137,6 +137,11 @@ class _HomepageState extends State<Homepage> {
                           const WeatherWidget(),
                           const SizedBox(height: 18),
                         ],
+                        // Fuel price widget.
+                        if (!isLoadingLocation) ...[
+                          const FuelPriceWidget(),
+                          const SizedBox(height: 18),
+                        ],
                         // Popular places.
                         if (!isLoadingLocation) ...[
                           PopularPlacesWidget(
@@ -149,8 +154,6 @@ class _HomepageState extends State<Homepage> {
                           ),
                           const SizedBox(height: 18),
                         ],
-                        const StatusCard(),
-                        const SizedBox(height: 18),
                         const CostComparisonCard(),
                         const SizedBox(height: 100),
                       ],

@@ -63,6 +63,8 @@ class RecentTripChip extends StatelessWidget {
                 children: [
                   Text(
                     label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -73,6 +75,8 @@ class RecentTripChip extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     destination,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,

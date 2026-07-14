@@ -11,7 +11,7 @@ FuelPrice _$FuelPriceFromJson(Map<String, dynamic> json) => FuelPrice(
   ron95: (json['ron95'] as num).toDouble(),
   ron97: (json['ron97'] as num).toDouble(),
   diesel: (json['diesel'] as num).toDouble(),
-  dieselEastMsia: (json['diesel_eastmsia'] as num).toDouble(),
+  dieselEastMsia: (json['diesel_eastmsia'] as num?)?.toDouble(),
   ron95Skps: (json['ron95_skps'] as num?)?.toDouble(),
   dieselBudi: (json['diesel_budi'] as num?)?.toDouble(),
   dieselSkds: (json['diesel_skds'] as num?)?.toDouble(),

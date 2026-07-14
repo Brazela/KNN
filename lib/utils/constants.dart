@@ -27,8 +27,11 @@ abstract class ApiUrls {
       'https://api.data.gov.my/weather/warning/earthquake';
 
   /// data.gov.my fuel price catalogue endpoint.
+  ///
+  /// Sorts by date descending and filters for price levels (not weekly
+  /// changes) so the first result is always the most recent price.
   static const String fuelPriceUrl =
-      'https://api.data.gov.my/data-catalogue?id=fuelprice&limit=1';
+      'https://api.data.gov.my/data-catalogue?id=fuelprice&sort=-date&limit=1&series_type=level';
 
   /// Google Maps Places Autocomplete endpoint (classic).
   static const String googlePlacesAutocompleteUrl =

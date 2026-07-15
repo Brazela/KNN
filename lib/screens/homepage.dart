@@ -7,6 +7,7 @@ import '../providers/providers.dart';
 import '../services/services.dart';
 import '../utils/constants.dart';
 import '../widgets/widgets.dart';
+import 'search_destination.dart';
 
 /// Root homepage for the KNN Commute app.
 ///
@@ -225,62 +226,88 @@ class _HeroSearch extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 18),
-        GestureDetector(
-          onTap: () {
-            Navigator.of(context).pushNamed(AppRoutes.searchDestination);
-          },
-          child: Container(
-            height: 58,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.border),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x0D000000),
-                  blurRadius: 16,
-                  offset: Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                const SizedBox(width: 16),
-                const Icon(
-                  Icons.search_rounded,
-                  color: AppColors.textMuted,
-                  size: 22,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Enter destination...',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                ),
-                Container(
-                  width: 72,
-                  height: 42,
-                  margin: const EdgeInsets.only(right: 6),
+        Row(
+          children: [
+            // Search text area — tap to go to search destination page.
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.of(context).pushNamed(
+                    AppRoutes.searchDestination,
+                  );
+                },
+                child: Container(
+                  height: 58,
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x0D000000),
+                        blurRadius: 16,
+                        offset: Offset(0, 6),
+                      ),
+                    ],
                   ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.arrow_forward_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 16),
+                      const Icon(
+                        Icons.search_rounded,
+                        color: AppColors.textMuted,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Enter destination...',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
+            const SizedBox(width: 10),
+            // Map icon — tap to pin a location on the map.
+            GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const SearchDestinationPage(
+                      openMapPicker: true,
+                    ),
+                  ),
+                );
+              },
+              child: Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x1A1A2CC8),
+                      blurRadius: 16,
+                      offset: Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.map_outlined,
+                  color: Colors.white,
+                  size: 26,
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );

@@ -21,10 +21,17 @@ class SearchDestinationPage extends StatefulWidget {
   ///
   /// If [initialPlace] is provided (e.g. from Popular Places), the page
   /// will pre-select it and show the confirm button immediately.
-  const SearchDestinationPage({this.initialPlace, super.key});
+  ///
+  /// If [openMapPicker] is true, the page opens directly into the full-
+  /// screen map-picker mode for pinning a location on the map.
+  const SearchDestinationPage({this.initialPlace, this.openMapPicker = false, super.key});
 
   /// An optional nearby place to pre-fill, bypassing the search step.
   final NearbyPlace? initialPlace;
+
+  /// If true, the full-screen map picker is shown immediately on open
+  /// instead of the search interface.
+  final bool openMapPicker;
 
   @override
   State<SearchDestinationPage> createState() => _SearchDestinationPageState();
@@ -58,6 +65,22 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
       );
       _pickerCenter = LatLng(p.latitude, p.longitude);
       _searchController.text = p.name;
+    }
+
+    // Auto-focus the search field after the first frame so the keyboard
+    // appears without an extra tap (skip if map picker opens directly).
+    if (!widget.openMapPicker) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _searchFocus.requestFocus();
+      });
+    }
+
+    // If the caller wants the map picker open immediately, schedule it
+    // after the build phase so the Scaffold is ready.
+    if (widget.openMapPicker) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _openMapPicker();
+      });
     }
   }
 

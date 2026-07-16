@@ -9,6 +9,7 @@ import '../navigation/navigation.dart';
 import '../services/services.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../utils/map_markers.dart';
 import '../widgets/widgets.dart';
 
 /// Displays a full-screen map with the selected route polyline and a
@@ -94,7 +95,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
 
       _polylinePoints = result.polylinePoints;
 
-      // Build markers.
+      // Build markers — origin + destination + numbered step checkpoints.
       _markers
         ..clear()
         ..add(
@@ -106,20 +107,43 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
             ),
             infoWindow: const InfoWindow(title: 'Origin'),
           ),
-        )
-        ..add(
+        );
+
+      // Add numbered step markers for each route step.
+      for (var i = 0; i < result.stepInfos.length; i++) {
+        final stepInfo = result.stepInfos[i];
+        final stepPos = stepInfo.endLatLng;
+        if (stepPos == null) continue;
+
+        final number = i + 1;
+        final markerIcon = await getNumberedMarker(number);
+        _markers.add(
           Marker(
-            markerId: const MarkerId('destination'),
-            position: LatLng(
-              _destination!.latitude,
-              _destination!.longitude,
+            markerId: MarkerId('step_$number'),
+            position: stepPos,
+            icon: markerIcon,
+            infoWindow: InfoWindow(
+              title: 'Step $number',
+              snippet: stepInfo.instruction,
             ),
-            icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueRed,
-            ),
-            infoWindow: const InfoWindow(title: 'Destination'),
           ),
         );
+      }
+
+      // Destination marker.
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('destination'),
+          position: LatLng(
+            _destination!.latitude,
+            _destination!.longitude,
+          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueRed,
+          ),
+          infoWindow: const InfoWindow(title: 'Destination'),
+        ),
+      );
 
       // Build polyline.
       _polylines

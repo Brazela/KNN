@@ -416,6 +416,24 @@ class GoogleMapsService {
         final distText = stepDistance?['text'] as String? ?? '';
         steps.add('$instruction${distText.isNotEmpty ? ' ($distText)' : ''}');
 
+        // Parse step start/end coordinates.
+        LatLng? startLatLng;
+        LatLng? endLatLng;
+        final startLoc = step['start_location'] as Map<String, dynamic>?;
+        final endLoc = step['end_location'] as Map<String, dynamic>?;
+        if (startLoc != null) {
+          startLatLng = LatLng(
+            (startLoc['lat'] as num).toDouble(),
+            (startLoc['lng'] as num).toDouble(),
+          );
+        }
+        if (endLoc != null) {
+          endLatLng = LatLng(
+            (endLoc['lat'] as num).toDouble(),
+            (endLoc['lng'] as num).toDouble(),
+          );
+        }
+
         // Parse transit-specific details.
         TransitStepInfo? transitInfo;
         if (travelMode == 'TRANSIT') {
@@ -447,6 +465,8 @@ class GoogleMapsService {
           durationSeconds: stepDuration?['value'] as int? ?? 0,
           travelMode: travelMode,
           transitInfo: transitInfo,
+          startLatLng: startLatLng,
+          endLatLng: endLatLng,
         ));
       }
     }
@@ -520,6 +540,8 @@ class DirectionsStepInfo {
     required this.durationSeconds,
     required this.travelMode,
     this.transitInfo,
+    this.startLatLng,
+    this.endLatLng,
   });
 
   /// Clean (HTML-stripped) instruction text.
@@ -536,6 +558,12 @@ class DirectionsStepInfo {
 
   /// Transit line and stop details, non-null only when [travelMode] is `'TRANSIT'`.
   final TransitStepInfo? transitInfo;
+
+  /// Coordinates where this step starts, if available.
+  final LatLng? startLatLng;
+
+  /// Coordinates where this step ends, if available.
+  final LatLng? endLatLng;
 }
 
 /// Transit-specific details for a transit step in a Directions API route.

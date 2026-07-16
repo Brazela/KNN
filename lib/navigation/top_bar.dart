@@ -25,22 +25,6 @@ class TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Center(
-            child: Icon(
-              Icons.directions_transit_rounded,
-              color: Colors.white,
-              size: 22,
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
         const Text(
           'KNN',
           style: TextStyle(

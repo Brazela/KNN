@@ -434,14 +434,13 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
     );
   }
 
-  /// Preview after an origin is selected.
+  /// Preview with an expanded map stretching down to the confirm button area.
   Widget _buildPlacePreview() {
     final origin = _selectedOrigin!;
     return Column(
       children: [
-        // Mini interactive map.
-        SizedBox(
-          height: 200,
+        // Full-height map — fills the space above the bottom section.
+        Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: GoogleMap(
@@ -499,7 +498,7 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
             ],
           ),
         ),
-        const Spacer(),
+        const SizedBox(height: 12),
         // Confirm button.
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -530,87 +529,107 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
     );
   }
 
-  /// Full-screen map picker overlay.
+  /// Map picker with a fixed bottom bar (map does not cover the confirm button).
   Widget _buildMapPicker() {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
     return Scaffold(
-      body: Stack(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: _pickerCenter,
-              zoom: 15,
-            ),
-            onMapCreated: _onMapCreated,
-            onCameraMove: _onCameraMove,
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-          ),
-          const Center(
-            child: Icon(
-              Icons.location_on_rounded,
-              color: AppColors.primary,
-              size: 50,
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: _closeMapPicker,
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x1A000000),
-                            blurRadius: 10,
-                            offset: Offset(0, 2),
+          // Map section — fills everything above the bottom bar.
+          Expanded(
+            child: Stack(
+              children: [
+                GoogleMap(
+                  initialCameraPosition: CameraPosition(
+                    target: _pickerCenter,
+                    zoom: 15,
+                  ),
+                  onMapCreated: _onMapCreated,
+                  onCameraMove: _onCameraMove,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: false,
+                ),
+                const Center(
+                  child: Icon(
+                    Icons.location_on_rounded,
+                    color: AppColors.primary,
+                    size: 50,
+                  ),
+                ),
+                SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: _closeMapPicker,
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x1A000000),
+                                  blurRadius: 10,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_rounded,
-                        color: AppColors.textPrimary,
-                      ),
+                        ),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: _goToCurrentLocation,
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x1A000000),
+                                  blurRadius: 10,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.my_location_rounded,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: _goToCurrentLocation,
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x1A000000),
-                            blurRadius: 10,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.my_location_rounded,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+
+          // Fixed bottom bar with the confirm button (consistent with place preview).
+          Container(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomPadding),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x08000000),
+                  blurRadius: 8,
+                  offset: Offset(0, -2),
+                ),
+              ],
+            ),
             child: SizedBox(
+              width: double.infinity,
               height: 56,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -619,8 +638,7 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  elevation: 4,
-                  shadowColor: const Color(0x30000000),
+                  elevation: 0,
                 ),
                 onPressed: _confirmMapPicker,
                 child: const Text(

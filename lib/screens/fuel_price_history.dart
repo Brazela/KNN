@@ -362,7 +362,89 @@ class _FuelPriceHistoryPageState extends State<FuelPriceHistoryPage> {
   }
 
   Widget _buildPriceHistoryTable() {
-    return const SizedBox.shrink(); // Task 8
+    final rows = _history.take(20).toList().reversed.toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '📅 Price History',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                headingRowColor: WidgetStateProperty.all(
+                  const Color(0xFFF9FAFB),
+                ),
+                columnSpacing: 20,
+                dataRowMinHeight: 40,
+                dataRowMaxHeight: 48,
+                columns: const [
+                  DataColumn(label: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12))),
+                  DataColumn(label: Text('RON95', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12))),
+                  DataColumn(label: Text('RON97', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12))),
+                  DataColumn(label: Text('Diesel', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12))),
+                  DataColumn(label: Text('Change', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12))),
+                ],
+                rows: rows.map((p) {
+                  final change = _computeTableChange(p);
+                  return DataRow(cells: [
+                    DataCell(Text(_formatShortDate(p.date), style: const TextStyle(fontSize: 12))),
+                    DataCell(Text(p.ron95.toStringAsFixed(2), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500))),
+                    DataCell(Text(p.ron97.toStringAsFixed(2), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500))),
+                    DataCell(Text(p.diesel.toStringAsFixed(2), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500))),
+                    DataCell(Text(
+                      change != null ? '${change >= 0 ? '+' : ''}${change.toStringAsFixed(2)}' : '-',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: change == null
+                            ? AppColors.textMuted
+                            : change > 0.005
+                                ? const Color(0xFFDC2626)
+                                : change < -0.005
+                                    ? const Color(0xFF059669)
+                                    : AppColors.textMuted,
+                      ),
+                    )),
+                  ]);
+                }).toList(),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  double? _computeTableChange(FuelPrice p) {
+    final idx = _history.indexOf(p);
+    if (idx < 0 || idx + 1 >= _history.length) return null;
+    final next = _history[idx + 1];
+    return p.ron95 - next.ron95;
+  }
+
+  String _formatShortDate(String dateStr) {
+    try {
+      final d = DateTime.parse(dateStr);
+      return '${d.day}/${d.month}/${d.year}';
+    } catch (_) {
+      return dateStr;
+    }
   }
 
   Widget _buildInsightsSection() {

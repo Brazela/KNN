@@ -35,4 +35,29 @@ class FuelPriceService {
 
     return FuelPrice.fromJson(data.first as Map<String, dynamic>);
   }
+
+  Future<List<FuelPrice>> getFuelPriceHistory({int limit = 50}) async {
+    final response = await _client.get(
+      Uri.parse(ApiUrls.fuelPriceHistoryUrl(limit: limit)),
+    );
+
+    if (response.statusCode != HttpStatus.ok) {
+      throw Exception(
+        'Failed to fetch fuel price history: ${response.statusCode}',
+      );
+    }
+
+    final data = jsonDecode(response.body) as List<dynamic>;
+    final levelRecords = data
+        .where((e) =>
+            (e as Map<String, dynamic>)['series_type'] == 'level')
+        .map((e) => FuelPrice.fromJson(e as Map<String, dynamic>))
+        .toList();
+
+    if (levelRecords.isEmpty) {
+      throw Exception('No level-type fuel price records found');
+    }
+
+    return levelRecords;
+  }
 }

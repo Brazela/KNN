@@ -145,7 +145,7 @@ class _PopularPlacesWidgetState extends State<PopularPlacesWidget> {
               controller: _scrollController,
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.only(left: 4, right: 16, bottom: 4),
+              padding: const EdgeInsets.only(left: 4, right: 16, top: 24, bottom: 8),
               itemCount: _places.length,
             separatorBuilder: (_, _) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
@@ -202,6 +202,7 @@ class _PlaceCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: 190,
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -219,7 +220,7 @@ class _PlaceCard extends StatelessWidget {
           children: [
             // Top accent bar with emoji.
             Container(
-              height: 48,
+              height: 44,
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius: const BorderRadius.vertical(
@@ -227,10 +228,10 @@ class _PlaceCard extends StatelessWidget {
                 ),
               ),
               alignment: Alignment.center,
-              child: Text(emoji, style: const TextStyle(fontSize: 24)),
+              child: Text(emoji, style: const TextStyle(fontSize: 22)),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -244,14 +245,14 @@ class _PlaceCard extends StatelessWidget {
                       color: AppColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   // Rating row.
                   if (place.rating > 0)
                     Row(
                       children: [
-                        const Icon(Icons.star_rounded, size: 13,
+                        const Icon(Icons.star_rounded, size: 12,
                             color: Color(0xFFF59E0B)),
-                        const SizedBox(width: 3),
+                        const SizedBox(width: 2),
                         Text(
                           place.rating.toStringAsFixed(1),
                           style: const TextStyle(
@@ -260,7 +261,7 @@ class _PlaceCard extends StatelessWidget {
                             color: AppColors.textPrimary,
                           ),
                         ),
-                        const SizedBox(width: 3),
+                        const SizedBox(width: 2),
                         Text(
                           '(${place.userRatingsTotal})',
                           style: const TextStyle(
@@ -270,7 +271,7 @@ class _PlaceCard extends StatelessWidget {
                           ),
                         ),
                         if (distanceText != null) ...[
-                          const SizedBox(width: 5),
+                          const SizedBox(width: 4),
                           Text(
                             '· $distanceText',
                             style: const TextStyle(
@@ -281,7 +282,7 @@ class _PlaceCard extends StatelessWidget {
                         ],
                       ],
                     ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   // Vicinity.
                   if (place.vicinity != null)
                     Text(

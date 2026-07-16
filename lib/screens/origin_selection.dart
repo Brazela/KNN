@@ -323,13 +323,6 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                // Current Location.
-                _QuickChip(
-                  icon: Icons.my_location_rounded,
-                  label: 'Current Location',
-                  color: AppColors.primary,
-                  onTap: _selectCurrentLocation,
-                ),
                 // Home.
                 if (tripProvider.home != null)
                   _QuickChip(

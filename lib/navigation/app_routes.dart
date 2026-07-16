@@ -41,6 +41,9 @@ abstract class AppRoutes {
   /// User profile route.
   static const String profile = '/profile';
 
+  /// Fuel price history route.
+  static const String fuelPriceHistory = '/fuel-price-history';
+
   /// Generates a route for the given [RouteSettings].
   ///
   /// Routes that do not yet have a dedicated screen return a placeholder
@@ -72,6 +75,8 @@ abstract class AppRoutes {
         return const RouteDetailsPage();
       case liveTracking:
         return const LiveTrackingPage();
+      case fuelPriceHistory:
+        return const FuelPriceHistoryPage();
       case tripHistory:
         return const _PlaceholderPage(title: 'Trip History');
       case favorites:

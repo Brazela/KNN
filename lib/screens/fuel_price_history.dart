@@ -265,8 +265,100 @@ class _FuelPriceHistoryPageState extends State<FuelPriceHistoryPage> {
     return max == 0 ? 5.0 : max;
   }
 
+  double? _weeklyChange(String field) {
+    if (_history.length < 2) return null;
+    final current = _getPrice(_history[0], field);
+    final previous = _getPrice(_history[1], field);
+    if (current == null || previous == null) return null;
+    return current - previous;
+  }
+
+  double? _getPrice(FuelPrice p, String field) {
+    return switch (field) {
+      'ron95' => p.ron95,
+      'ron97' => p.ron97,
+      'diesel' => p.diesel,
+      'dieselEastMsia' => p.dieselEastMsia,
+      _ => null,
+    };
+  }
+
   Widget _buildCurrentPricesSection() {
-    return const SizedBox.shrink(); // Task 7
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '⛽ Current Prices',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            children: [
+              _buildPriceRow('RON 95', _history[0].ron95, _weeklyChange('ron95'), const Color(0xFFD97706)),
+              const SizedBox(height: 12),
+              _buildPriceRow('RON 97', _history[0].ron97, _weeklyChange('ron97'), const Color(0xFF059669)),
+              const SizedBox(height: 12),
+              _buildPriceRow('Diesel (Peninsular)', _history[0].diesel, _weeklyChange('diesel'), const Color(0xFF1D4ED8)),
+              if (_history[0].dieselEastMsia != null) ...[
+                const SizedBox(height: 12),
+                _buildPriceRow('Diesel (East MSIA)', _history[0].dieselEastMsia!, _weeklyChange('dieselEastMsia'), const Color(0xFF7C3AED)),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPriceRow(String label, double price, double? change, Color accent) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 28,
+          decoration: BoxDecoration(
+            color: accent,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ),
+        if (change != null)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: _ChangeIndicator(change: change),
+          ),
+        Text(
+          'RM ${price.toStringAsFixed(2)}',
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+            letterSpacing: -0.3,
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildPriceHistoryTable() {
@@ -275,5 +367,48 @@ class _FuelPriceHistoryPageState extends State<FuelPriceHistoryPage> {
 
   Widget _buildInsightsSection() {
     return const SizedBox.shrink(); // Task 9
+  }
+}
+
+class _ChangeIndicator extends StatelessWidget {
+  const _ChangeIndicator({required this.change});
+
+  final double change;
+
+  @override
+  Widget build(BuildContext context) {
+    final IconData icon;
+    final Color color;
+    final String text;
+
+    if (change > 0.005) {
+      icon = Icons.arrow_upward_rounded;
+      color = const Color(0xFFDC2626); // red
+      text = '+RM ${change.toStringAsFixed(2)}';
+    } else if (change < -0.005) {
+      icon = Icons.arrow_downward_rounded;
+      color = const Color(0xFF059669); // green
+      text = '-RM ${(-change).toStringAsFixed(2)}';
+    } else {
+      icon = Icons.remove_rounded;
+      color = AppColors.textMuted;
+      text = 'RM 0.00';
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 2),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+      ],
+    );
   }
 }

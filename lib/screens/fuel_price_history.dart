@@ -447,8 +447,99 @@ class _FuelPriceHistoryPageState extends State<FuelPriceHistoryPage> {
     }
   }
 
+  String _buildInsightText() {
+    if (_history.length < 2) return 'Not enough data for insights.';
+    final ron95Change = _weeklyChange('ron95');
+    final ron97Change = _weeklyChange('ron97');
+    final dieselChange = _weeklyChange('diesel');
+
+    final String directionMsg;
+    if ((ron95Change ?? 0) < -0.005 &&
+        (ron97Change ?? 0) < -0.005 &&
+        (dieselChange ?? 0) < -0.005) {
+      directionMsg = 'RON95, RON97 & Diesel all dropped this week. Great time to fill up!';
+    } else if ((ron95Change ?? 0) < -0.005) {
+      final sen = ((-ron95Change!) * 100).round();
+      directionMsg = 'RON95 dropped $sen sen this week.';
+    } else if ((ron97Change ?? 0) < -0.005) {
+      final sen = ((-ron97Change!) * 100).round();
+      directionMsg = 'RON97 dropped $sen sen this week.';
+    } else if ((dieselChange ?? 0) < -0.005) {
+      final sen = ((-dieselChange!) * 100).round();
+      directionMsg = 'Diesel dropped $sen sen this week.';
+    } else if ((ron95Change ?? 0) > 0.005 ||
+        (ron97Change ?? 0) > 0.005 ||
+        (dieselChange ?? 0) > 0.005) {
+      final changed = <String>[];
+      for (final entry in [
+        ('RON95', ron95Change),
+        ('RON97', ron97Change),
+        ('Diesel', dieselChange),
+      ]) {
+        if ((entry.$2 ?? 0) > 0.005) {
+          changed.add('${entry.$1} rose ${(entry.$2! * 100).round()} sen');
+        }
+      }
+      directionMsg = '${changed.join(', ')} this week.';
+    } else {
+      directionMsg = 'Prices unchanged this week.';
+    }
+
+    final weekday = DateTime.now().weekday;
+    final String fillUpMsg;
+    if (weekday == DateTime.monday || weekday == DateTime.tuesday) {
+      fillUpMsg = 'Fill up before midnight tonight!';
+    } else if (weekday == DateTime.wednesday) {
+      fillUpMsg = 'Prices updated today.';
+    } else {
+      fillUpMsg = 'Fill up before next Wednesday.';
+    }
+
+    return '$directionMsg\n$fillUpMsg';
+  }
+
   Widget _buildInsightsSection() {
-    return const SizedBox.shrink(); // Task 9
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '💡 Insights',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0FDF4),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFBBF7D0)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('💡', style: TextStyle(fontSize: 18)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _buildInsightText(),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF065F46),
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 

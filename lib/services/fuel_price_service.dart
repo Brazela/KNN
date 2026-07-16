@@ -36,6 +36,10 @@ class FuelPriceService {
     return FuelPrice.fromJson(data.first as Map<String, dynamic>);
   }
 
+  /// Fetches the most recent [limit] fuel price level records.
+  ///
+  /// The API may intermix `series_type=level` and `series_type=change_weekly`
+  /// records — this method filters to only level records.
   Future<List<FuelPrice>> getFuelPriceHistory({int limit = 50}) async {
     final response = await _client.get(
       Uri.parse(ApiUrls.fuelPriceHistoryUrl(limit: limit)),
@@ -48,10 +52,10 @@ class FuelPriceService {
     }
 
     final data = jsonDecode(response.body) as List<dynamic>;
-    final levelRecords = data
-        .where((e) =>
-            (e as Map<String, dynamic>)['series_type'] == 'level')
-        .map((e) => FuelPrice.fromJson(e as Map<String, dynamic>))
+    final typedData = data.cast<Map<String, dynamic>>();
+    final levelRecords = typedData
+        .where((e) => e['series_type'] == 'level')
+        .map(FuelPrice.fromJson)
         .toList();
 
     if (levelRecords.isEmpty) {

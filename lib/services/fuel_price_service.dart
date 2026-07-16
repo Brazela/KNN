@@ -20,7 +20,7 @@ class FuelPriceService {
   /// Returns a [FuelPrice] parsed from the first (most recent) element.
   /// Throws an exception if the request fails or the response is empty.
   Future<FuelPrice> getFuelPrice() async {
-    final response = await _client.get(Uri.parse(ApiUrls.fuelPriceUrl));
+    final response = await _client.get(Uri.parse(ApiUrls.fuelPriceLatestUrl));
 
     if (response.statusCode != HttpStatus.ok) {
       throw Exception(

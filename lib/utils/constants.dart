@@ -30,8 +30,16 @@ abstract class ApiUrls {
   ///
   /// Sorts by date descending and filters for price levels (not weekly
   /// changes) so the first result is always the most recent price.
-  static const String fuelPriceUrl =
-      'https://api.data.gov.my/data-catalogue?id=fuelprice&sort=-date&limit=1&series_type=level';
+  static const String fuelPriceBaseUrl =
+      'https://api.data.gov.my/data-catalogue?id=fuelprice&sort=-date&series_type=level';
+
+  static String fuelPriceUrl({int limit = 1}) =>
+      '$fuelPriceBaseUrl&limit=$limit';
+
+  static String get fuelPriceLatestUrl => fuelPriceUrl();
+
+  static String fuelPriceHistoryUrl({int limit = 50}) =>
+      fuelPriceUrl(limit: limit);
 
   /// Google Maps Places Autocomplete endpoint (classic).
   static const String googlePlacesAutocompleteUrl =

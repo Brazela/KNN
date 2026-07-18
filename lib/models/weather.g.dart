@@ -87,3 +87,29 @@ Map<String, dynamic> _$EarthquakeWarningToJson(EarthquakeWarning instance) =>
       'longitude': instance.longitude,
       'magnitude': instance.magnitude,
     };
+
+MonthlyAverage _$MonthlyAverageFromJson(Map<String, dynamic> json) =>
+    MonthlyAverage(
+      avgTemp: (json['avg_temp'] as num).toDouble(),
+      rainDays: (json['rain_days'] as num).toInt(),
+      avgHumidity: (json['avg_humidity'] as num).toDouble(),
+      year: (json['year'] as num).toInt(),
+      month: (json['month'] as num).toInt(),
+      hottestTemp: (json['hottest_temp'] as num).toDouble(),
+      hottestDate: json['hottest_date'] as String,
+      coldestTemp: (json['coldest_temp'] as num).toDouble(),
+      coldestDate: json['coldest_date'] as String,
+    );
+
+Map<String, dynamic> _$MonthlyAverageToJson(MonthlyAverage instance) =>
+    <String, dynamic>{
+      'avg_temp': instance.avgTemp,
+      'rain_days': instance.rainDays,
+      'avg_humidity': instance.avgHumidity,
+      'year': instance.year,
+      'month': instance.month,
+      'hottest_temp': instance.hottestTemp,
+      'hottest_date': instance.hottestDate,
+      'coldest_temp': instance.coldestTemp,
+      'coldest_date': instance.coldestDate,
+    };

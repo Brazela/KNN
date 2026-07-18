@@ -44,6 +44,9 @@ abstract class AppRoutes {
   /// Fuel price history route.
   static const String fuelPriceHistory = '/fuel-price-history';
 
+  /// Weather history route.
+  static const String weatherHistory = '/weather-history';
+
   /// Generates a route for the given [RouteSettings].
   ///
   /// Routes that do not yet have a dedicated screen return a placeholder
@@ -77,6 +80,8 @@ abstract class AppRoutes {
         return const LiveTrackingPage();
       case fuelPriceHistory:
         return const FuelPriceHistoryPage();
+      case weatherHistory:
+        return const WeatherHistoryPage();
       case tripHistory:
         return const _PlaceholderPage(title: 'Trip History');
       case favorites:

@@ -64,6 +64,10 @@ abstract class ApiUrls {
   /// Google Places API (New) — Nearby Search.
   static const String googlePlacesNewNearbyUrl =
       'https://places.googleapis.com/v1/places:searchNearby';
+
+  /// Open-Meteo historical weather archive API.
+  static const String historicalWeatherBaseUrl =
+      'https://archive-api.open-meteo.com/v1/archive';
 }
 
 /// Google Maps API configuration.

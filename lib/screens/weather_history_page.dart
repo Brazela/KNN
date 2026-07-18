@@ -22,8 +22,6 @@ class WeatherHistoryPage extends StatefulWidget {
 class _WeatherHistoryPageState extends State<WeatherHistoryPage> {
   Location? _selectedLocation;
   List<Weather> _forecasts = [];
-  // ignore: unused_field
-  List<WeatherWarning> _warnings = [];
   List<WeatherWarning> _storedWarnings = [];
   MonthlyAverage? _monthlyAverage;
   bool _loadingForecast = false;
@@ -92,9 +90,11 @@ class _WeatherHistoryPageState extends State<WeatherHistoryPage> {
 
   Future<void> _loadWarningsWithPersistence() async {
     setState(() => _loadingWarnings = true);
+
+    // Always load persisted warnings first (safe outside try-catch)
+    final stored = await _readStoredWarnings();
+
     try {
-      // Load stored warnings
-      final stored = await _readStoredWarnings();
       // Fetch live warnings
       final service = context.read<WeatherService>();
       final live = await service.getWarnings();
@@ -116,18 +116,15 @@ class _WeatherHistoryPageState extends State<WeatherHistoryPage> {
 
       // Save back
       await _writeStoredWarnings(stored);
+    } catch (_) {
+      // Live fetch failed — persisted warnings still display below
+    }
 
-      if (mounted) {
-        setState(() {
-          _storedWarnings = stored;
-          _warnings = live;
-          _loadingWarnings = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _loadingWarnings = false);
-      }
+    if (mounted) {
+      setState(() {
+        _storedWarnings = stored;
+        _loadingWarnings = false;
+      });
     }
   }
 
@@ -372,7 +369,7 @@ class _WeatherHistoryPageState extends State<WeatherHistoryPage> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _forecasts.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
               itemBuilder: (context, index) {
                 final f = _forecasts[index];
                 final emoji = weatherEmoji(f.summaryForecast);

@@ -174,10 +174,14 @@ class WeatherService {
     final times = (daily['time'] as List<dynamic>).cast<String>();
     final maxTemps = (daily['temperature_2m_max'] as List<dynamic>).cast<double>();
     final minTemps = (daily['temperature_2m_min'] as List<dynamic>).cast<double>();
-    final precip = (daily['precipitation_sum'] as List<dynamic>)
-        .cast<double?>();
+    final precip = (daily['precipitation_sum'] as List<dynamic>?)
+        ?.map((e) => (e as num?)?.toDouble())
+        .toList() ??
+    [];
     final humidity = (daily['relative_humidity_2m_mean'] as List<dynamic>?)
-        ?.cast<double?>() ?? [];
+        ?.map((e) => (e as num?)?.toDouble())
+        .toList() ??
+    [];
 
     var sumTemp = 0.0;
     var rainDays = 0;

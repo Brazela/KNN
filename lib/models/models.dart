@@ -1,6 +1,8 @@
+export 'app_notification.dart';
 export 'comparison.dart';
 export 'distance_matrix.dart';
 export 'driving_route.dart';
+export 'favorite_location.dart';
 export 'fuel_price.dart';
 export 'gtfs_feed.dart';
 export 'gtfs_stop.dart';
@@ -11,5 +13,7 @@ export 'nearby_place.dart';
 export 'place_detail.dart';
 export 'place_suggestion.dart';
 export 'route.dart';
+export 'saved_route.dart';
+export 'settings_options.dart';
 export 'trip.dart';
 export 'weather.dart';

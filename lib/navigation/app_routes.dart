@@ -54,7 +54,8 @@ abstract class AppRoutes {
 
   /// Builds the widget for a named route.
   ///
-  /// TODO: Replace placeholder pages with real screen implementations.
+  /// TODO: Replace remaining placeholder pages with real screen
+  /// implementations.
   static Widget _buildPage(String? name, Object? arguments) {
     switch (name) {
       case home:
@@ -75,11 +76,11 @@ abstract class AppRoutes {
       case tripHistory:
         return const _PlaceholderPage(title: 'Trip History');
       case favorites:
-        return const _PlaceholderPage(title: 'Favorites');
+        return const FavoritesPage();
       case notifications:
-        return const _PlaceholderPage(title: 'Notifications');
+        return const NotificationsPage();
       case settings:
-        return const _PlaceholderPage(title: 'Settings');
+        return const SettingsPage();
       case alertsEmergency:
         return const _PlaceholderPage(title: 'Alerts & Emergency');
       case profile:

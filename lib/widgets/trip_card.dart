@@ -53,7 +53,7 @@ class TripCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF111827),
+                    color: AppColors.textPrimary,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -74,7 +74,7 @@ class TripCard extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF111827),
+                  color: AppColors.textPrimary,
                 ),
               ),
               const SizedBox(width: 12),

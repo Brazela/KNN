@@ -28,6 +28,7 @@ class _TripHistoryPageState extends State<TripHistoryPage> {
   bool _hasMore = false;
   bool _isLoadingMore = false;
   bool _initialLoading = true;
+  int _generation = 0;
 
   @override
   void initState() {
@@ -43,7 +44,10 @@ class _TripHistoryPageState extends State<TripHistoryPage> {
   }
 
   Future<void> _loadPage({required int page, bool replace = false}) async {
-    setState(() => _isLoadingMore = true);
+    final gen = ++_generation;
+    if (!replace) {
+      setState(() => _isLoadingMore = true);
+    }
 
     try {
       final provider = context.read<TripProvider>();
@@ -54,12 +58,14 @@ class _TripHistoryPageState extends State<TripHistoryPage> {
         offset: page * 10,
       );
 
+      if (gen != _generation) return;
+
       final count = await provider.countFilteredTrips(
         mode: _selectedMode,
         searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
       );
 
-      if (!mounted) return;
+      if (gen != _generation || !mounted) return;
 
       setState(() {
         if (replace) {
@@ -88,13 +94,19 @@ class _TripHistoryPageState extends State<TripHistoryPage> {
   void _onSearchChanged(String value) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
-      setState(() => _searchQuery = value);
+      setState(() {
+        _searchQuery = value;
+        _initialLoading = true;
+      });
       _loadPage(page: 0, replace: true);
     });
   }
 
   void _onFilterChanged(TravelMode? mode) {
-    setState(() => _selectedMode = mode);
+    setState(() {
+      _selectedMode = mode;
+      _initialLoading = true;
+    });
     _loadPage(page: 0, replace: true);
   }
 

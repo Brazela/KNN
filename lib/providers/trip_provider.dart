@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
@@ -49,7 +51,9 @@ class TripProvider extends ChangeNotifier {
     if (_recentTrips.length > 10) {
       _recentTrips = _recentTrips.sublist(0, 10);
     }
-    _tripHistoryService?.insertTrip(trip);
+    unawaited(
+      _tripHistoryService?.insertTrip(trip).catchError((_) {}),
+    );
     notifyListeners();
   }
 
@@ -61,10 +65,7 @@ class TripProvider extends ChangeNotifier {
 
   Future<void> initHistoryService(TripHistoryService service) async {
     _tripHistoryService = service;
-    _recentTrips = await service.getAllTrips();
-    if (_recentTrips.length > 10) {
-      _recentTrips = _recentTrips.sublist(0, 10);
-    }
+    _recentTrips = await service.getTrips(limit: 10);
     notifyListeners();
   }
 

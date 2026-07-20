@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -6,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../models/models.dart';
 import '../navigation/navigation.dart';
+import '../providers/providers.dart';
 import '../services/services.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
@@ -190,9 +192,31 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
     );
   }
 
-  /// Navigates to the live tracking screen.
+  /// Navigates to the live tracking screen and saves the trip to history.
   void _startTrip() {
     if (_mode == null || _origin == null || _destination == null) return;
+
+    final cost = _mode == TravelMode.transit
+        ? (_transitRoute?.fare ?? 0.0)
+        : (_drivingRoute?.fuelCost ?? 0.0);
+    final timeMinutes = _mode == TravelMode.transit
+        ? (_transitRoute?.durationMinutes ?? 0)
+        : ((_drivingRoute?.durationSeconds ?? 0) / 60).round();
+    final id =
+        'trip_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(9999)}';
+
+    context.read<TripProvider>().addRecentTrip(
+      Trip(
+        id: id,
+        origin: _origin!,
+        destination: _destination!,
+        mode: _mode!,
+        cost: cost,
+        timeMinutes: timeMinutes,
+        date: DateTime.now(),
+        weather: _weather,
+      ),
+    );
 
     Navigator.of(context).pushNamed(
       AppRoutes.liveTracking,

@@ -1,4 +1,5 @@
 export 'comparison_card.dart';
+export 'trip_card.dart';
 export 'cost_comparison_card.dart';
 export 'fuel_price_widget.dart';
 export 'location_permission.dart';

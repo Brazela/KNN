@@ -6,6 +6,7 @@ export 'location_permission.dart';
 export 'popular_places_widget.dart';
 export 'recent_trip_chip.dart';
 export 'recommendation_badge.dart';
+export 'recommendation_card.dart';
 export 'route_step_card.dart';
 export 'search_input.dart';
 export 'shortcut_chip.dart';

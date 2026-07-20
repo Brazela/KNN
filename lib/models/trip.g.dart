@@ -17,6 +17,14 @@ Trip _$TripFromJson(Map<String, dynamic> json) => Trip(
   weather: json['weather'] == null
       ? null
       : Weather.fromJson(json['weather'] as Map<String, dynamic>),
+  transitCost: (json['transit_cost'] as num?)?.toDouble(),
+  transitTime: (json['transit_time'] as num?)?.toInt(),
+  drivingCost: (json['driving_cost'] as num?)?.toDouble(),
+  drivingTime: (json['driving_time'] as num?)?.toInt(),
+  recommendedMode: json['recommended_mode'] as String?,
+  followedRecommendation: (json['followed_recommendation'] as num?)?.toInt(),
+  savingsCost: (json['savings_cost'] as num?)?.toDouble(),
+  savingsTime: (json['savings_time'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$TripToJson(Trip instance) => <String, dynamic>{
@@ -28,4 +36,12 @@ Map<String, dynamic> _$TripToJson(Trip instance) => <String, dynamic>{
   'time_minutes': instance.timeMinutes,
   'date': instance.date.toIso8601String(),
   'weather': instance.weather,
+  'transit_cost': instance.transitCost,
+  'transit_time': instance.transitTime,
+  'driving_cost': instance.drivingCost,
+  'driving_time': instance.drivingTime,
+  'recommended_mode': instance.recommendedMode,
+  'followed_recommendation': instance.followedRecommendation,
+  'savings_cost': instance.savingsCost,
+  'savings_time': instance.savingsTime,
 };

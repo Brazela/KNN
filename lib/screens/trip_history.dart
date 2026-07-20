@@ -127,6 +127,21 @@ class _TripHistoryPageState extends State<TripHistoryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      bottomNavigationBar: BottomNav(
+        currentIndex: 1,
+        onTap: (index) {
+          switch (index) {
+            case 0:
+              Navigator.of(context).pop();
+            case 1:
+              break;
+            case 2:
+              Navigator.of(context).pushNamed(AppRoutes.comparison);
+            case 3:
+              Navigator.of(context).pushNamed(AppRoutes.settings);
+          }
+        },
+      ),
       body: SafeArea(
         child: Column(
           children: [

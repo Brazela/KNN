@@ -18,7 +18,7 @@ class TripHistoryService {
     final path = p.join(dbPath, 'trips.db');
     return openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE trips (
@@ -38,6 +38,34 @@ class TripHistoryService {
             weather_json TEXT
           )
         ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('''
+            ALTER TABLE trips ADD COLUMN transit_cost REAL
+          ''');
+          await db.execute('''
+            ALTER TABLE trips ADD COLUMN transit_time INTEGER
+          ''');
+          await db.execute('''
+            ALTER TABLE trips ADD COLUMN driving_cost REAL
+          ''');
+          await db.execute('''
+            ALTER TABLE trips ADD COLUMN driving_time INTEGER
+          ''');
+          await db.execute('''
+            ALTER TABLE trips ADD COLUMN recommended_mode TEXT
+          ''');
+          await db.execute('''
+            ALTER TABLE trips ADD COLUMN followed_recommendation INTEGER
+          ''');
+          await db.execute('''
+            ALTER TABLE trips ADD COLUMN savings_cost REAL
+          ''');
+          await db.execute('''
+            ALTER TABLE trips ADD COLUMN savings_time INTEGER
+          ''');
+        }
       },
     );
   }
@@ -61,6 +89,14 @@ class TripHistoryService {
         'time_minutes': trip.timeMinutes,
         'date': trip.date.toIso8601String(),
         'weather_json': trip.weather != null ? jsonEncode(trip.weather!.toJson()) : null,
+        'transit_cost': trip.transitCost,
+        'transit_time': trip.transitTime,
+        'driving_cost': trip.drivingCost,
+        'driving_time': trip.drivingTime,
+        'recommended_mode': trip.recommendedMode,
+        'followed_recommendation': trip.followedRecommendation,
+        'savings_cost': trip.savingsCost,
+        'savings_time': trip.savingsTime,
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -139,6 +175,40 @@ class TripHistoryService {
     await db.delete('trips', where: 'id = ?', whereArgs: [id]);
   }
 
+  Future<Map<String, dynamic>> getRecommendationStats() async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN recommended_mode = 'transit' THEN 1 ELSE 0 END) as transit_recs,
+        SUM(CASE WHEN recommended_mode = 'driving' THEN 1 ELSE 0 END) as driving_recs,
+        COALESCE(SUM(savings_cost), 0) as total_savings
+      FROM trips
+      WHERE recommended_mode IS NOT NULL
+    ''');
+    return result.first;
+  }
+
+  Future<List<Trip>> getRecommendations({
+    int limit = 5,
+    int offset = 0,
+  }) async {
+    final db = await database;
+    final rows = await db.rawQuery(
+      'SELECT * FROM trips WHERE recommended_mode IS NOT NULL ORDER BY date DESC LIMIT ? OFFSET ?',
+      [limit, offset],
+    );
+    return rows.map(_rowToTrip).toList();
+  }
+
+  Future<int> countRecommendations() async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM trips WHERE recommended_mode IS NOT NULL',
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
   Trip _rowToTrip(Map<String, dynamic> row) {
     return Trip(
       id: row['id'] as String,
@@ -161,6 +231,14 @@ class TripHistoryService {
       weather: row['weather_json'] != null
           ? Weather.fromJson(jsonDecode(row['weather_json'] as String) as Map<String, dynamic>)
           : null,
+      transitCost: (row['transit_cost'] as num?)?.toDouble(),
+      transitTime: row['transit_time'] as int?,
+      drivingCost: (row['driving_cost'] as num?)?.toDouble(),
+      drivingTime: row['driving_time'] as int?,
+      recommendedMode: row['recommended_mode'] as String?,
+      followedRecommendation: row['followed_recommendation'] as int?,
+      savingsCost: (row['savings_cost'] as num?)?.toDouble(),
+      savingsTime: row['savings_time'] as int?,
     );
   }
 }

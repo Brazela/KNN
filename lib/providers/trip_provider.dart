@@ -84,6 +84,27 @@ class TripProvider extends ChangeNotifier {
     );
   }
 
+  Future<Map<String, dynamic>> getRecommendationStats() async {
+    if (_tripHistoryService == null) return {};
+    return _tripHistoryService!.getRecommendationStats();
+  }
+
+  Future<List<Trip>> getRecommendations({
+    int limit = 5,
+    int offset = 0,
+  }) async {
+    if (_tripHistoryService == null) return [];
+    return _tripHistoryService!.getRecommendations(
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  Future<int> countRecommendations() async {
+    if (_tripHistoryService == null) return 0;
+    return _tripHistoryService!.countRecommendations();
+  }
+
   Future<int> countFilteredTrips({
     TravelMode? mode,
     String? searchQuery,

@@ -42,6 +42,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
   Location? _origin;
   Location? _destination;
   Weather? _weather;
+  Comparison? _comparison;
 
   // Real-time vehicle tracking overlay.
   List<GTFSVehicle> _realtimeVehicles = [];
@@ -70,6 +71,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
     _origin = args['origin'] as Location?;
     _destination = args['destination'] as Location?;
     _weather = args['weather'] as Weather?;
+    _comparison = args['comparison'] as Comparison?;
 
     if (_origin == null || _destination == null || _mode == null) {
       setState(() {
@@ -205,6 +207,34 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
     final id =
         'trip_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(9999)}';
 
+    // Recommendation data from comparison.
+    double? transitCost;
+    int? transitTime;
+    double? drivingCost;
+    int? drivingTime;
+    String? recommendedMode;
+    int? followed;
+    double? savingsCost;
+    int? savingsTime;
+
+    if (_comparison != null) {
+      transitCost = _comparison!.transitOption.fare;
+      transitTime = _comparison!.transitOption.durationMinutes;
+      drivingCost = _comparison!.drivingOption.fuelCost + _comparison!.drivingOption.tolls;
+      drivingTime = _comparison!.drivingOption.durationSeconds ~/ 60;
+      recommendedMode = _comparison!.recommendation.name;
+      followed = _comparison!.recommendation.name == _mode!.name ? 1 : 0;
+
+      // Calculate savings: cost/time difference between recommended and actual.
+      if (_comparison!.recommendation == Recommendation.transit) {
+        savingsCost = transitCost - cost;
+        savingsTime = transitTime - timeMinutes;
+      } else if (_comparison!.recommendation == Recommendation.driving) {
+        savingsCost = drivingCost - cost;
+        savingsTime = drivingTime - timeMinutes;
+      }
+    }
+
     context.read<TripProvider>().addRecentTrip(
       Trip(
         id: id,
@@ -215,6 +245,14 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
         timeMinutes: timeMinutes,
         date: DateTime.now(),
         weather: _weather,
+        transitCost: transitCost,
+        transitTime: transitTime,
+        drivingCost: drivingCost,
+        drivingTime: drivingTime,
+        recommendedMode: recommendedMode,
+        followedRecommendation: followed,
+        savingsCost: savingsCost,
+        savingsTime: savingsTime,
       ),
     );
 

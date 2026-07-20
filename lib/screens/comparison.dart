@@ -38,6 +38,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
   String _recommendationReason = '';
 
   TravelMode? _selectedMode;
+  Comparison? _comparison;
 
   // Real-time vehicle tracking.
   List<GTFSVehicle> _realtimeVehicles = [];
@@ -118,6 +119,26 @@ class _ComparisonPageState extends State<ComparisonPage> {
           _loading = false;
         });
       }
+
+      // Build comparison object for persistence.
+      final bestTransit = transitRoutes.isNotEmpty ? transitRoutes.first : TransitRoute(
+        id: 'none',
+        name: 'No transit',
+        type: TransitMode.unknown,
+        stops: [],
+        durationMinutes: 0,
+        transfers: 0,
+        fare: 0,
+      );
+      _comparison = Comparison(
+        origin: origin,
+        destination: destination,
+        transitOption: bestTransit,
+        drivingOption: drivingRoute,
+        recommendation: recommendation.$1,
+        recommendationReason: recommendation.$2,
+        weather: originForecasts.isNotEmpty ? originForecasts.first : null,
+      );
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -482,6 +503,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
           'origin': origin,
           'destination': destination,
           'weather': _originWeather,
+          'comparison': _comparison,
         },
       );
     } else if (_selectedMode == TravelMode.driving && _drivingRoute != null) {
@@ -493,6 +515,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
           'origin': origin,
           'destination': destination,
           'weather': _originWeather,
+          'comparison': _comparison,
         },
       );
     }

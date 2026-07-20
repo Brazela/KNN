@@ -83,7 +83,7 @@ abstract class AppRoutes {
       case weatherHistory:
         return const WeatherHistoryPage();
       case tripHistory:
-        return const _PlaceholderPage(title: 'Trip History');
+        return const TripHistoryPage();
       case favorites:
         return const _PlaceholderPage(title: 'Favorites');
       case notifications:

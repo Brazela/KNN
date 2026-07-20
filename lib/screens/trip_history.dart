@@ -7,6 +7,7 @@ import '../models/models.dart';
 import '../navigation/navigation.dart';
 import '../providers/providers.dart';
 import '../utils/constants.dart';
+import '../utils/helpers.dart';
 import '../widgets/widgets.dart';
 
 class TripHistoryPage extends StatefulWidget {
@@ -16,7 +17,9 @@ class TripHistoryPage extends StatefulWidget {
   State<TripHistoryPage> createState() => _TripHistoryPageState();
 }
 
-class _TripHistoryPageState extends State<TripHistoryPage> {
+class _TripHistoryPageState extends State<TripHistoryPage>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
   bool _showSearch = false;
   final _searchController = TextEditingController();
   Timer? _debounce;
@@ -30,14 +33,29 @@ class _TripHistoryPageState extends State<TripHistoryPage> {
   bool _initialLoading = true;
   int _generation = 0;
 
+  List<Trip> _recommendations = [];
+  int _recPage = 0;
+  bool _recHasMore = false;
+  bool _recIsLoadingMore = false;
+  bool _recInitialLoading = true;
+  Map<String, dynamic> _recStats = {};
+  int _recGeneration = 0;
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.index == 1 && _recommendations.isEmpty) {
+        _loadRecommendations(page: 0, replace: true);
+      }
+    });
     _loadPage(page: 0, replace: true);
   }
 
   @override
   void dispose() {
+    _tabController.dispose();
     _searchController.dispose();
     _debounce?.cancel();
     super.dispose();
@@ -123,6 +141,58 @@ class _TripHistoryPageState extends State<TripHistoryPage> {
     Navigator.of(context).pushNamed(AppRoutes.comparison);
   }
 
+  Future<void> _loadRecommendations({required int page, bool replace = false}) async {
+    final gen = ++_recGeneration;
+    if (!replace) {
+      setState(() => _recIsLoadingMore = true);
+    }
+
+    try {
+      final provider = context.read<TripProvider>();
+
+      if (replace) {
+        _recStats = await provider.getRecommendationStats();
+      }
+
+      final results = await provider.getRecommendations(
+        limit: 5,
+        offset: page * 5,
+      );
+
+      if (gen != _recGeneration) return;
+
+      final count = await provider.countRecommendations();
+
+      if (gen != _recGeneration || !mounted) return;
+
+      setState(() {
+        if (replace) {
+          _recommendations = results;
+          _recPage = 0;
+        } else {
+          _recommendations.addAll(results);
+          _recPage = page;
+        }
+        _recHasMore = _recommendations.length < count;
+        _recInitialLoading = false;
+        _recIsLoadingMore = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _recInitialLoading = false;
+        _recIsLoadingMore = false;
+      });
+    }
+  }
+
+  void _onCompareAgain(Trip trip) {
+    final provider = context.read<TripProvider>();
+    provider.setOrigin(trip.origin);
+    provider.setDestination(trip.destination);
+    Navigator.of(context).pushNamed(AppRoutes.comparison);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -146,9 +216,37 @@ class _TripHistoryPageState extends State<TripHistoryPage> {
         child: Column(
           children: [
             _buildHeader(),
-            if (_showSearch) _buildSearchBar(),
-            _buildFilterChips(),
-            Expanded(child: _buildBody()),
+            if (_showSearch && _tabController.index == 0) _buildSearchBar(),
+            TabBar(
+              controller: _tabController,
+              onTap: (index) {
+                setState(() {
+                  if (index == 1) {
+                    _showSearch = false;
+                    _searchController.clear();
+                    _searchQuery = '';
+                  }
+                });
+              },
+              labelColor: AppColors.primary,
+              unselectedLabelColor: AppColors.textSecondary,
+              indicatorColor: AppColors.primary,
+              indicatorWeight: 3,
+              indicatorSize: TabBarIndicatorSize.label,
+              tabs: const [
+                Tab(text: 'Trips'),
+                Tab(text: 'Recommendations'),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildTripsTab(),
+                  _buildRecommendationsTab(),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -186,11 +284,7 @@ class _TripHistoryPageState extends State<TripHistoryPage> {
               });
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.sort_rounded),
-            color: AppColors.primary,
-            onPressed: null,
-          ),
+
         ],
       ),
     );
@@ -260,7 +354,16 @@ class _TripHistoryPageState extends State<TripHistoryPage> {
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildTripsTab() {
+    return Column(
+      children: [
+        _buildFilterChips(),
+        Expanded(child: _buildTripsList()),
+      ],
+    );
+  }
+
+  Widget _buildTripsList() {
     if (_initialLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -335,6 +438,221 @@ class _TripHistoryPageState extends State<TripHistoryPage> {
           onRepeatTrip: () => _onRepeatTrip(_trips[index]),
         );
       },
+    );
+  }
+
+  Widget _buildRecommendationsTab() {
+    if (_recInitialLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_recommendations.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.lightbulb_outline_rounded,
+              size: 64,
+              color: AppColors.textMuted,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No recommendations yet',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Complete a trip to see your recommendation history',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: _recommendations.length + (_recHasMore ? 1 : 0) + 1,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return _buildStatsCard();
+        }
+
+        final recIndex = index - 1;
+
+        if (recIndex == _recommendations.length) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: _recIsLoadingMore
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : TextButton(
+                      onPressed: () {
+                        if (!_recIsLoadingMore && _recHasMore) {
+                          _loadRecommendations(page: _recPage + 1);
+                        }
+                      },
+                      child: const Text(
+                        'Load More',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+            ),
+          );
+        }
+
+        return RecommendationCard(
+          trip: _recommendations[recIndex],
+          onCompareAgain: () => _onCompareAgain(_recommendations[recIndex]),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatsCard() {
+    final total = _recStats['total'] as int? ?? 0;
+    final transitRecs = _recStats['transit_recs'] as int? ?? 0;
+    final drivingRecs = _recStats['driving_recs'] as int? ?? 0;
+    final totalSavings = (_recStats['total_savings'] as num?)?.toDouble() ?? 0.0;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 16,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.analytics_rounded, size: 18, color: AppColors.textSecondary),
+              SizedBox(width: 6),
+              Text(
+                'Statistics',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF374151),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _StatItem(
+                value: '$total',
+                label: 'Total',
+              ),
+              const SizedBox(width: 16),
+              _StatItem(
+                value: '$transitRecs',
+                label: 'Transit (${total > 0 ? (transitRecs * 100 ~/ total) : 0}%)',
+                color: AppColors.success,
+              ),
+              const SizedBox(width: 16),
+              _StatItem(
+                value: '$drivingRecs',
+                label: 'Driving (${total > 0 ? (drivingRecs * 100 ~/ total) : 0}%)',
+                color: AppColors.primary,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.savingsBackground,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.savings_rounded,
+                  size: 16,
+                  color: AppColors.success,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Total Savings: ${formatCurrency(totalSavings)}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.savingsText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatItem extends StatelessWidget {
+  const _StatItem({
+    required this.value,
+    required this.label,
+    this.color,
+  });
+
+  final String value;
+  final String label;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: color ?? AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -46,7 +46,7 @@ class _TripHistoryPageState extends State<TripHistoryPage>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
-      if (_tabController.index == 1 && _recommendations.isEmpty) {
+      if (_tabController.index == 1) {
         _loadRecommendations(page: 0, replace: true);
       }
     });

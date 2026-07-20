@@ -16,7 +16,7 @@ class RecommendationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasRecommendation = trip.recommendedMode != null;
+    final hasRecommendation = trip.recommendedMode != null && trip.recommendedMode != 'either';
     final followed = trip.followedRecommendation == 1;
     final recommendedTransit = trip.recommendedMode == 'transit';
 

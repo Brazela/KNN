@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
+import '../utils/address_utils.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 
@@ -45,21 +46,54 @@ class TripCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '${trip.origin.address ?? 'Unknown'} → ${trip.destination.address ?? 'Unknown'}',
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: 'From: ',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                TextSpan(
+                  text: shortAddress(trip.origin),
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+              ],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: 'To: ',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                TextSpan(
+                  text: shortAddress(trip.destination),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 8),
           Row(

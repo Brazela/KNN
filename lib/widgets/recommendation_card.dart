@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../utils/constants.dart';
+import '../utils/address_utils.dart';
 import '../utils/helpers.dart';
 
 class RecommendationCard extends StatelessWidget {
@@ -49,15 +50,53 @@ class RecommendationCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
 
-          // Origin → Destination.
-          Text(
-            '${trip.origin.address ?? 'Unknown'} → ${trip.destination.address ?? 'Unknown'}',
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: 'From: ',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                TextSpan(
+                  text: shortAddress(trip.origin),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
             ),
-            maxLines: 2,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: 'To: ',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                TextSpan(
+                  text: shortAddress(trip.destination),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 12),

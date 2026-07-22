@@ -8,6 +8,7 @@ import '../models/models.dart';
 import '../navigation/navigation.dart';
 import '../providers/providers.dart';
 import '../services/services.dart';
+import '../utils/address_utils.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/widgets.dart';
@@ -591,7 +592,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${_shortAddress(origin)} → ${_shortAddress(destination)}',
+                  '${shortAddress(origin)} → ${shortAddress(destination)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -988,17 +989,6 @@ class _ComparisonPageState extends State<ComparisonPage> {
         ),
       ),
     );
-  }
-
-  String _shortAddress(Location? location) {
-    if (location == null) return 'Unknown';
-    final address = location.address ?? '';
-    if (address.isEmpty) {
-      return '${location.latitude.toStringAsFixed(3)}, ${location.longitude.toStringAsFixed(3)}';
-    }
-    // Take first part before comma for brevity.
-    final parts = address.split(',');
-    return parts.first.trim();
   }
 
   String _transitModeLabel(TransitMode mode) {

@@ -168,7 +168,24 @@ class _HomepageState extends State<Homepage> {
       ),
       bottomNavigationBar: BottomNav(
         currentIndex: _bottomNavIndex,
-        onTap: (index) => setState(() => _bottomNavIndex = index),
+        onTap: (index) {
+          if (index == _bottomNavIndex) return;
+          switch (index) {
+            case 1:
+              Navigator.of(context).pushReplacementNamed(
+                AppRoutes.tripHistory,
+              );
+              break;
+            case 2:
+              Navigator.of(context).pushReplacementNamed(
+                AppRoutes.comparison,
+              );
+              break;
+            case 3:
+              Navigator.of(context).pushReplacementNamed(AppRoutes.settings);
+              break;
+          }
+        },
       ),
     );
   }
@@ -181,6 +198,9 @@ class _TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TopBar(
+      onFavoritesTap: () {
+        Navigator.of(context).pushNamed(AppRoutes.favorites);
+      },
       onNotificationTap: () {
         Navigator.of(context).pushNamed(AppRoutes.notifications);
       },

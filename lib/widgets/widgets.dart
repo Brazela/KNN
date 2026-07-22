@@ -12,6 +12,7 @@ export 'recommendation_badge.dart';
 export 'route_step_card.dart';
 export 'search_input.dart';
 export 'settings/settings_dropdown_tile.dart';
+export 'settings/settings_link_tile.dart';
 export 'settings/settings_section.dart';
 export 'settings/settings_switch_tile.dart';
 export 'settings/settings_text_field_tile.dart';

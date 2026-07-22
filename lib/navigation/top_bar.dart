@@ -6,11 +6,15 @@ import '../utils/constants.dart';
 class TopBar extends StatelessWidget {
   /// Creates a [TopBar].
   const TopBar({
+    this.onFavoritesTap,
     this.onNotificationTap,
     this.onAlertTap,
     this.onProfileTap,
     super.key,
   });
+
+  /// Called when the favorites icon is tapped.
+  final VoidCallback? onFavoritesTap;
 
   /// Called when the notification icon is tapped.
   final VoidCallback? onNotificationTap;
@@ -51,6 +55,11 @@ class TopBar extends StatelessWidget {
           ),
         ),
         const Spacer(),
+        _IconButton(
+          icon: Icons.bookmark_outline_rounded,
+          onTap: onFavoritesTap,
+        ),
+        const SizedBox(width: 8),
         _IconButton(
           icon: Icons.notifications_outlined,
           onTap: onNotificationTap,

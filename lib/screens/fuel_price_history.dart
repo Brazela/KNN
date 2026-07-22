@@ -311,10 +311,8 @@ class _FuelPriceHistoryPageState extends State<FuelPriceHistoryPage> {
               _buildPriceRow('RON 97', _history[0].ron97, _weeklyChange('ron97'), const Color(0xFF059669)),
               const SizedBox(height: 12),
               _buildPriceRow('Diesel (Peninsular)', _history[0].diesel, _weeklyChange('diesel'), const Color(0xFF1D4ED8)),
-              if (_history[0].dieselEastMsia != null) ...[
-                const SizedBox(height: 12),
-                _buildPriceRow('Diesel (East MSIA)', _history[0].dieselEastMsia!, _weeklyChange('dieselEastMsia'), const Color(0xFF7C3AED)),
-              ],
+              const SizedBox(height: 12),
+              _buildPriceRow('Diesel (East MSIA)', _history[0].dieselEastMsia ?? double.nan, _weeklyChange('dieselEastMsia'), const Color(0xFF7C3AED)),
             ],
           ),
         ),
@@ -323,6 +321,7 @@ class _FuelPriceHistoryPageState extends State<FuelPriceHistoryPage> {
   }
 
   Widget _buildPriceRow(String label, double price, double? change, Color accent) {
+    final priceText = price.isNaN ? 'N/A' : 'RM ${price.toStringAsFixed(2)}';
     return Row(
       children: [
         Container(
@@ -350,7 +349,7 @@ class _FuelPriceHistoryPageState extends State<FuelPriceHistoryPage> {
             child: _ChangeIndicator(change: change),
           ),
         Text(
-          'RM ${price.toStringAsFixed(2)}',
+          priceText,
           style: const TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,

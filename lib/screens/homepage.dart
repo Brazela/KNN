@@ -155,6 +155,12 @@ class _HomepageState extends State<Homepage> {
                           const FuelPriceWidget(),
                           const SizedBox(height: 18),
                         ],
+                        // Parking locator shortcut — only visible when a
+                        // destination is set.
+                        if (!isLoadingLocation) ...[
+                          const ParkingShortcutWidget(),
+                          const SizedBox(height: 18),
+                        ],
                         const CostComparisonCard(),
                         const SizedBox(height: 100),
                       ],

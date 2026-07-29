@@ -2,6 +2,7 @@ export 'comparison_card.dart';
 export 'cost_comparison_card.dart';
 export 'fuel_price_widget.dart';
 export 'location_permission.dart';
+export 'parking_shortcut_widget.dart';
 export 'popular_places_widget.dart';
 export 'recent_trip_chip.dart';
 export 'recommendation_badge.dart';

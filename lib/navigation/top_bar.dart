@@ -26,7 +26,7 @@ class TopBar extends StatelessWidget {
     return Row(
       children: [
         const Text(
-          'KNN',
+          'TripCerdas',
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w800,

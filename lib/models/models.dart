@@ -8,6 +8,7 @@ export 'gtfs_trip.dart';
 export 'gtfs_vehicle.dart';
 export 'location.dart';
 export 'nearby_place.dart';
+export 'parking_spot.dart';
 export 'place_detail.dart';
 export 'place_suggestion.dart';
 export 'route.dart';

@@ -45,6 +45,10 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
   // Real-time vehicle tracking overlay.
   List<GTFSVehicle> _realtimeVehicles = [];
   Timer? _realtimeTimer;
+  List<String> _vehicleEtaMessages = [];
+
+  /// Transit step infos from Directions API (only transit steps).
+  List<DirectionsStepInfo> _transitStepInfos = [];
 
   @override
   void initState() {
@@ -160,6 +164,13 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
           ),
         );
 
+      // Store transit step infos for vehicle matching.
+      if (_mode == TravelMode.transit) {
+        _transitStepInfos = result.stepInfos
+            .where((s) => s.travelMode == 'TRANSIT')
+            .toList();
+      }
+
       if (mounted) {
         setState(() {
           _directions = result;
@@ -242,66 +253,224 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
     );
   }
 
-  /// Fetches live vehicle positions and adds them as markers on the map.
+  /// Fetches live vehicle positions filtered by the route's transit mode and line.
   Future<void> _fetchRealtimeVehicles() async {
     try {
       final gtfsService = context.read<GTFSService>();
-      final vehicles = await gtfsService.fetchAllRealtimeVehicles();
+
+      // Only fetch vehicles matching the route's transit mode.
+      final transitMode = _transitRoute?.type;
+      final vehicles = await gtfsService.fetchVehiclesByTransitMode(transitMode);
       if (!mounted) return;
 
-      // Filter to vehicles near the route.
-      List<GTFSVehicle> filtered;
-      if (_origin != null && _destination != null) {
-        final midLat = (_origin!.latitude + _destination!.latitude) / 2;
-        final midLng = (_origin!.longitude + _destination!.longitude) / 2;
-        filtered = vehicles.where((v) {
-          final dist = calculateDistance(
-            midLat, midLng, v.latitude!, v.longitude!,
-          );
-          return dist < 20.0;
-        }).toList();
-      } else {
-        filtered = vehicles;
+      // Get the line name(s) the user will actually ride (e.g. "T800", "KJ").
+      final lineNames = _transitStepInfos
+          .map((s) => s.transitInfo?.lineName ?? '')
+          .where((n) => n.isNotEmpty)
+          .toList();
+      final lineNameLower = lineNames.isNotEmpty ? lineNames.first.toLowerCase() : '';
+
+      // Get departure station info from the first transit step.
+      LatLng? departureCoords;
+      String departureStationName = '';
+      if (_transitStepInfos.isNotEmpty) {
+        final firstTransit = _transitStepInfos.first;
+        departureCoords = firstTransit.startLatLng;
+        departureStationName = firstTransit.transitInfo?.departureStop ?? '';
       }
+
+      // Filter vehicles:
+      // 1. Must be on the correct route/line (match routeId or label to line name)
+      // 2. Must be within 5 km of the departure station (not 20 km of midpoint)
+      final filtered = vehicles.where((v) {
+        // Match by routeId or label against the line name.
+        final vRoute = (v.routeId ?? '').toLowerCase();
+        final vLabel = (v.label ?? '').toLowerCase();
+        final vId = (v.vehicleId ?? '').toLowerCase();
+        final matchesLine = lineNameLower.isEmpty ||
+            vRoute.contains(lineNameLower) ||
+            vLabel.contains(lineNameLower) ||
+            vId.contains(lineNameLower);
+
+        if (!matchesLine) return false;
+
+        // Must be near the departure station.
+        if (departureCoords != null) {
+          final dist = calculateDistance(
+            v.latitude!, v.longitude!,
+            departureCoords.latitude, departureCoords.longitude,
+          );
+          return dist < 5.0; // within 5 km of departure station
+        }
+        return true;
+      }).toList();
+
+      // Find the vehicle nearest to the departure station.
+      GTFSVehicle? nearestVehicle;
+      double nearestDist = double.infinity;
+      String nearestEtaMsg = '';
 
       // Build vehicle markers.
       _markers.removeWhere((m) => m.markerId.value.startsWith('rt_'));
       for (final v in filtered) {
-        final color = _vehicleMarkerColor(v);
-        final label = v.label ?? v.routeId ?? v.vehicleId;
+        final vehicleType = _inferVehicleType(v);
+        final plate = v.label ?? v.vehicleId;
+        final lineTag = lineNames.isNotEmpty ? lineNames.first : '';
+
+        // Calculate actual speed in km/h (GTFS speed is in m/s).
+        final speedMs = v.speed ?? 0;
+        final speedKmh = (speedMs > 0.5 && speedMs < 33.4) // 0.5–120 km/h
+            ? '${(speedMs * 3.6).toStringAsFixed(0)} km/h'
+            : '';
+
+        // Distance from vehicle to departure station.
+        double distToStation = double.infinity;
+        String? distanceMsg;
+        if (departureCoords != null) {
+          distToStation = calculateDistance(
+            v.latitude!, v.longitude!,
+            departureCoords.latitude, departureCoords.longitude,
+          );
+          if (distToStation < 5.0) {
+            distanceMsg = '${distToStation.toStringAsFixed(2)} km from $departureStationName';
+          }
+        }
+
+        // ETA using actual vehicle speed if available.
+        String? etaText;
+        if (distToStation < 5.0) {
+          final effectiveSpeedKmh = speedMs > 0.5
+              ? speedMs * 3.6
+              : _defaultSpeedKmh(vehicleType);
+          final etaMinutes = ((distToStation / effectiveSpeedKmh) * 60).ceil();
+          etaText = etaMinutes <= 1 ? '<1 min away' : '$etaMinutes min away';
+        }
+
+        // Track nearest vehicle.
+        if (distToStation < nearestDist) {
+          nearestDist = distToStation;
+          nearestVehicle = v;
+          if (distToStation < 5.0) {
+            final effectiveSpeedKmh = v.speed != null && v.speed! > 0.5
+                ? v.speed! * 3.6
+                : _defaultSpeedKmh(vehicleType);
+            final etaMin = ((distToStation / effectiveSpeedKmh) * 60).ceil();
+            final etaStr = etaMin <= 1 ? '<1 min' : '$etaMin min';
+            nearestEtaMsg = '$lineTag $plate arriving at $departureStationName in $etaStr';
+          }
+        }
+
+        // Highlight nearest vehicle in red.
+        final isNearest = v.vehicleId == nearestVehicle?.vehicleId &&
+            distToStation < 5.0;
+        final markerIcon = isNearest
+            ? await getVehicleMarker(vehicleType, highlightColor: true)
+            : await getVehicleMarker(vehicleType);
+
+        // Direction indicator.
+        final direction = v.bearing != null
+            ? _bearingToDirection(v.bearing!)
+            : '';
+
         _markers.add(
           Marker(
             markerId: MarkerId('rt_${v.vehicleId}'),
             position: LatLng(v.latitude!, v.longitude!),
-            icon: BitmapDescriptor.defaultMarkerWithHue(color),
+            icon: markerIcon,
             rotation: v.bearing ?? 0,
             infoWindow: InfoWindow(
-              title: label,
-              snippet: v.speed != null
-                  ? '${(v.speed! * 3.6).toStringAsFixed(0)} km/h'
-                  : '',
+              title: '$lineTag $plate${direction.isNotEmpty ? ' · $direction' : ''}',
+              snippet: [
+                if (speedKmh.isNotEmpty) speedKmh,
+                if (etaText != null) etaText,
+                if (distanceMsg != null) distanceMsg,
+              ].join(' · '),
             ),
           ),
         );
       }
 
-      setState(() => _realtimeVehicles = filtered);
+      // Build ETA messages for the bottom sheet.
+      final etaMessages = <String>[];
+      if (nearestVehicle != null && nearestDist < 5.0) {
+        etaMessages.add(nearestEtaMsg);
+      }
+
+      setState(() {
+        _realtimeVehicles = filtered;
+        _vehicleEtaMessages = etaMessages;
+      });
     } catch (_) {
       // Silently ignore.
     }
   }
 
-  /// Color-codes vehicle markers: red=Train, blue=Bus, orange=Feeder.
-  double _vehicleMarkerColor(GTFSVehicle vehicle) {
+  /// Returns a reasonable default speed (km/h) for a vehicle type when
+  /// realtime speed data is unavailable.
+  double _defaultSpeedKmh(String vehicleType) {
+    switch (vehicleType) {
+      case 'BUS':
+        return 25.0;
+      case 'SUBWAY':
+      case 'METRO':
+        return 40.0;
+      case 'TRAIN':
+      case 'RAIL':
+        return 50.0;
+      case 'TRAM':
+      case 'LIGHT_RAIL':
+        return 30.0;
+      case 'MONORAIL':
+        return 35.0;
+      default:
+        return 30.0;
+    }
+  }
+
+  /// Infers the vehicle type string from a [GTFSVehicle] for marker icon.
+  String _inferVehicleType(GTFSVehicle vehicle) {
+    // First check the transit step info for the actual vehicle type.
+    if (_transitStepInfos.isNotEmpty) {
+      final ti = _transitStepInfos.first.transitInfo;
+      if (ti != null) {
+        final vt = ti.vehicleType.toUpperCase();
+        if (vt == 'BUS' || vt == 'SUBWAY' || vt == 'METRO' ||
+            vt == 'TRAIN' || vt == 'RAIL' || vt == 'HEAVY_RAIL' ||
+            vt == 'COMMUTER_TRAIN' || vt == 'TRAM' || vt == 'LIGHT_RAIL' ||
+            vt == 'MONORAIL') {
+          return vt;
+        }
+      }
+    }
+
+    // Fallback: infer from vehicle IDs.
     final id = (vehicle.routeId ?? '').toLowerCase() +
         (vehicle.label ?? '').toLowerCase();
     if (id.contains('train') || id.contains('rail') || id.contains('ktm')) {
-      return BitmapDescriptor.hueRed;
+      return 'TRAIN';
     }
-    if (id.contains('feeder') || id.contains('mrt')) {
-      return BitmapDescriptor.hueOrange;
+    if (id.contains('subway') || id.contains('metro') || id.contains('mrt')) {
+      return 'SUBWAY';
     }
-    return BitmapDescriptor.hueBlue;
+    if (id.contains('lrt') || id.contains('light')) {
+      return 'TRAM';
+    }
+    if (id.contains('monorail')) {
+      return 'MONORAIL';
+    }
+    return 'BUS';
+  }
+
+  /// Converts a bearing in degrees to a cardinal direction string.
+  String _bearingToDirection(double bearing) {
+    if (bearing < 22.5 || bearing >= 337.5) return 'Northbound';
+    if (bearing < 67.5) return 'NE-bound';
+    if (bearing < 112.5) return 'Eastbound';
+    if (bearing < 157.5) return 'SE-bound';
+    if (bearing < 202.5) return 'Southbound';
+    if (bearing < 247.5) return 'SW-bound';
+    if (bearing < 292.5) return 'Westbound';
+    return 'NW-bound';
   }
 
   @override
@@ -339,7 +508,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
             },
           ),
 
-          // Back button overlay.
+          // Back button overlay (top-left).
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -364,6 +533,82 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
                     color: AppColors.textPrimary,
                     size: 20,
                   ),
+                ),
+              ),
+            ),
+          ),
+
+          // Zoom controls (top-right).
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Align(
+                alignment: Alignment.topRight,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Zoom in.
+                    GestureDetector(
+                      onTap: () => _mapController?.animateCamera(
+                        CameraUpdate.zoomIn(),
+                      ),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(12),
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x1A000000),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.add_rounded,
+                          color: AppColors.textPrimary,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: 32,
+                      height: 1,
+                      color: AppColors.border,
+                    ),
+                    // Zoom out.
+                    GestureDetector(
+                      onTap: () => _mapController?.animateCamera(
+                        CameraUpdate.zoomOut(),
+                      ),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: const BorderRadius.vertical(
+                            bottom: Radius.circular(12),
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x1A000000),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.remove_rounded,
+                          color: AppColors.textPrimary,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -527,6 +772,57 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
               ),
 
               const Divider(height: 24, indent: 20, endIndent: 20),
+
+              // Vehicle ETA messages — shown for transit mode with live vehicles.
+              if (_mode == TravelMode.transit && _vehicleEtaMessages.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.directions_bus_rounded,
+                              size: 14, color: AppColors.textSecondary),
+                          SizedBox(width: 6),
+                          Text(
+                            'Live vehicle updates',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      ...List.generate(_vehicleEtaMessages.length, (i) {
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: i < _vehicleEtaMessages.length - 1 ? 4 : 0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('• ', style: TextStyle(
+                                fontSize: 12, color: AppColors.success,
+                              )),
+                              Expanded(
+                                child: Text(
+                                  _vehicleEtaMessages[i],
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: 10),
+                    ],
+                  ),
+                ),
 
               // Steps list — uses string steps as primary (always reliable),
               // enhanced with icons/durations from stepInfos when available.

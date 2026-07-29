@@ -624,12 +624,59 @@ class GTFSService {
   /// Note: `rapid-rail-kl` (LRT/MRT/Monorail) does not yet have stable
   /// realtime feeds as of 2026.
   Future<List<GTFSVehicle>> fetchAllRealtimeVehicles() async {
-    // Agencies with stable realtime vehicle position feeds.
-    final feeds = [
-      (agency: 'ktmb', category: null as String?),
-      (agency: 'prasarana', category: 'rapid-bus-kl'),
-      (agency: 'prasarana', category: 'rapid-bus-mrtfeeder'),
-    ];
+    return fetchVehiclesByTransitMode(null);
+  }
+
+  /// Fetches GTFS realtime vehicles filtered by transit mode.
+  ///
+  /// If [transitMode] is null, fetches from all agencies.
+  /// Otherwise, fetches only from agencies that serve the given transit mode.
+  ///
+  /// Mapping:
+  /// - [TransitMode.train] → ktmb
+  /// - [TransitMode.mrt] / [TransitMode.lrt] / [TransitMode.monorail] → prasarana rapid-rail-kl
+  /// - [TransitMode.bus] → prasarana rapid-bus-kl, rapid-bus-mrtfeeder
+  /// - null / unknown → all agencies
+  Future<List<GTFSVehicle>> fetchVehiclesByTransitMode(TransitMode? transitMode) async {
+    List<({String agency, String? category})> feeds;
+
+    if (transitMode == null || transitMode == TransitMode.unknown) {
+      feeds = [
+        (agency: 'ktmb', category: null),
+        (agency: 'prasarana', category: 'rapid-bus-kl'),
+        (agency: 'prasarana', category: 'rapid-bus-mrtfeeder'),
+        (agency: 'prasarana', category: 'rapid-rail-kl'),
+      ];
+    } else {
+      switch (transitMode) {
+        case TransitMode.train:
+          feeds = [
+            (agency: 'ktmb', category: null),
+          ];
+          break;
+        case TransitMode.mrt:
+        case TransitMode.lrt:
+        case TransitMode.monorail:
+          feeds = [
+            (agency: 'prasarana', category: 'rapid-rail-kl'),
+          ];
+          break;
+        case TransitMode.bus:
+          feeds = [
+            (agency: 'prasarana', category: 'rapid-bus-kl'),
+            (agency: 'prasarana', category: 'rapid-bus-mrtfeeder'),
+          ];
+          break;
+        case TransitMode.unknown:
+          feeds = [
+            (agency: 'ktmb', category: null),
+            (agency: 'prasarana', category: 'rapid-bus-kl'),
+            (agency: 'prasarana', category: 'rapid-bus-mrtfeeder'),
+            (agency: 'prasarana', category: 'rapid-rail-kl'),
+          ];
+          break;
+      }
+    }
 
     final futures = feeds.map((f) {
       return fetchGTFSRealtime(f.agency, category: f.category)
@@ -639,7 +686,6 @@ class GTFSService {
     final results = await Future.wait(futures);
     final allVehicles = results.expand((v) => v).toList();
 
-    // Filter to vehicles with valid coordinates.
     return allVehicles
         .where((v) => v.latitude != null && v.longitude != null)
         .toList();

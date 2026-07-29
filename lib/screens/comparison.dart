@@ -1,7 +1,4 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 
 import '../models/models.dart';
@@ -39,11 +36,8 @@ class _ComparisonPageState extends State<ComparisonPage> {
 
   TravelMode? _selectedMode;
 
-  // Real-time vehicle tracking.
-  List<GTFSVehicle> _realtimeVehicles = [];
-  Timer? _realtimeTimer;
-  bool _showRealtimeMap = false;
-  GoogleMapController? _realtimeMapController;
+  /// Transit step details (line name, stops, vehicle type) for the best route.
+  List<DirectionsStepInfo>? _transitStepInfos;
 
   @override
   void initState() {
@@ -153,6 +147,13 @@ class _ComparisonPageState extends State<ComparisonPage> {
       final routes = <TransitRoute>[];
       for (final result in transitResults) {
         routes.add(_directionsToTransitRoute(result));
+      }
+
+      // Store transit step infos from the best (first) route for leg display.
+      if (transitResults.isNotEmpty) {
+        _transitStepInfos = transitResults.first.stepInfos
+            .where((s) => s.travelMode == 'TRANSIT')
+            .toList();
       }
 
       if (routes.isNotEmpty) return routes;
@@ -398,70 +399,11 @@ class _ComparisonPageState extends State<ComparisonPage> {
   void _selectMode(TravelMode mode) {
     setState(() {
       _selectedMode = mode;
-      if (mode == TravelMode.transit) {
-        _showRealtimeMap = true;
-        _startRealtimePolling();
-      } else {
-        _showRealtimeMap = false;
-        _stopRealtimePolling();
-      }
     });
-  }
-
-  /// Starts polling GTFS realtime vehicle positions every 30 seconds.
-  void _startRealtimePolling() {
-    _fetchRealtimeVehicles(); // immediate first fetch
-    _realtimeTimer?.cancel();
-    _realtimeTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) => _fetchRealtimeVehicles(),
-    );
-  }
-
-  /// Stops the realtime polling timer.
-  void _stopRealtimePolling() {
-    _realtimeTimer?.cancel();
-    _realtimeTimer = null;
-  }
-
-  /// Fetches live vehicle positions from all available GTFS Realtime feeds.
-  Future<void> _fetchRealtimeVehicles() async {
-    // Capture references before async gap.
-    final gtfsService = context.read<GTFSService>();
-    final tripProvider = context.read<TripProvider>();
-    final origin = tripProvider.origin;
-    final destination = tripProvider.destination;
-
-    try {
-      final vehicles = await gtfsService.fetchAllRealtimeVehicles();
-
-      if (!mounted) return;
-
-      // Filter to vehicles near the route corridor (within ~20km of midpoint).
-      if (origin != null && destination != null) {
-        final midLat = (origin.latitude + destination.latitude) / 2;
-        final midLng = (origin.longitude + destination.longitude) / 2;
-
-        final filtered = vehicles.where((v) {
-          final dist = calculateDistance(
-            midLat, midLng, v.latitude!, v.longitude!,
-          );
-          return dist < 20.0; // within 20km of route midpoint
-        }).toList();
-
-        if (mounted) setState(() => _realtimeVehicles = filtered);
-      } else {
-        if (mounted) setState(() => _realtimeVehicles = vehicles);
-      }
-    } catch (_) {
-      // Silently ignore — realtime data is supplementary.
-    }
   }
 
   @override
   void dispose() {
-    _stopRealtimePolling();
-    _realtimeMapController?.dispose();
     super.dispose();
   }
 
@@ -669,9 +611,9 @@ class _ComparisonPageState extends State<ComparisonPage> {
             ),
             const SizedBox(height: 14),
 
-            // Real-time vehicle map — shown when transit is selected.
-            if (_showRealtimeMap && _selectedMode == TravelMode.transit)
-              _buildRealtimeMap(),
+            // Transit legs — shown when transit is selected.
+            if (_selectedMode == TravelMode.transit && _transitStepInfos != null)
+              _buildTransitLegs(),
           ] else ...[
             _buildNoTransitCard(),
             const SizedBox(height: 14),
@@ -709,185 +651,130 @@ class _ComparisonPageState extends State<ComparisonPage> {
     );
   }
 
-  Widget _buildRealtimeMap() {
-    final tripProvider = context.read<TripProvider>();
-    final origin = tripProvider.origin;
-    final destination = tripProvider.destination;
-
-    if (origin == null || destination == null) return const SizedBox.shrink();
-
-    final midLat = (origin.latitude + destination.latitude) / 2;
-    final midLng = (origin.longitude + destination.longitude) / 2;
+  /// Shows the transit legs (e.g. Bus → MRT) the user will ride on.
+  Widget _buildTransitLegs() {
+    final legs = _transitStepInfos!;
+    if (legs.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Section header.
-        Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.directions_bus_rounded,
-                color: AppColors.primary,
-                size: 18,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Live Transit Vehicles',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    _realtimeVehicles.isEmpty
-                        ? 'Fetching vehicle positions…'
-                        : '${_realtimeVehicles.length} vehicles near your route',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            GestureDetector(
-              onTap: _fetchRealtimeVehicles,
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.refresh_rounded,
-                  size: 16,
+        const Padding(
+          padding: EdgeInsets.only(bottom: 10),
+          child: Row(
+            children: [
+              Icon(Icons.route_rounded, size: 16, color: AppColors.textSecondary),
+              SizedBox(width: 6),
+              Text(
+                'Your route',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
                   color: AppColors.textSecondary,
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-        const SizedBox(height: 10),
+        ...legs.asMap().entries.map((entry) {
+          final i = entry.key;
+          final step = entry.value;
+          final ti = step.transitInfo;
+          if (ti == null) return const SizedBox.shrink();
 
-        // Vehicle type legend.
-        if (_realtimeVehicles.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+          final icon = _transitVehicleIcon(ti.vehicleType);
+          final isLast = i == legs.length - 1;
+
+          return Padding(
+            padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _legendDot(const Color(0xFFE53935), 'Train'),
+                // Timeline connector.
+                SizedBox(
+                  width: 32,
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(icon, color: AppColors.success, size: 18),
+                      ),
+                      if (!isLast)
+                        Container(
+                          width: 2,
+                          height: 28,
+                          color: AppColors.border,
+                        ),
+                    ],
+                  ),
+                ),
                 const SizedBox(width: 12),
-                _legendDot(const Color(0xFF1E88E5), 'Bus'),
-                const SizedBox(width: 12),
-                _legendDot(const Color(0xFFFB8C00), 'Feeder Bus'),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        ti.lineName,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${ti.departureStop}  →  ${ti.arrivalStop}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${ti.vehicleName} · ${ti.numStops} stops · ${(step.durationSeconds / 60).ceil()} min',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
-          ),
-
-        // Mini map.
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: SizedBox(
-            height: 200,
-            child: GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: LatLng(midLat, midLng),
-                zoom: 13,
-              ),
-              markers: _buildVehicleMarkers(),
-              myLocationEnabled: false,
-              zoomControlsEnabled: false,
-              mapToolbarEnabled: false,
-              scrollGesturesEnabled: true,
-              zoomGesturesEnabled: true,
-              rotateGesturesEnabled: false,
-              tiltGesturesEnabled: false,
-              onMapCreated: (controller) {
-                _realtimeMapController = controller;
-              },
-            ),
-          ),
-        ),
+          );
+        }),
         const SizedBox(height: 14),
       ],
     );
   }
 
-  /// Builds a legend dot with label.
-  Widget _legendDot(Color color, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 1.5),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-      ],
-    );
-  }
-
-  /// Builds Google Map markers for all realtime vehicles.
-  ///
-  /// Color-coded by vehicle type:
-  /// - Red → Train (KTM)
-  /// - Blue → Bus (RapidKL)
-  /// - Orange → Feeder Bus (MRT feeder)
-  Set<Marker> _buildVehicleMarkers() {
-    return _realtimeVehicles.map((v) {
-      final color = _vehicleMarkerColor(v);
-      final label = v.label ?? v.routeId ?? v.vehicleId;
-
-      return Marker(
-        markerId: MarkerId('rt_${v.vehicleId}'),
-        position: LatLng(v.latitude!, v.longitude!),
-        icon: BitmapDescriptor.defaultMarkerWithHue(color),
-        rotation: v.bearing ?? 0,
-        infoWindow: InfoWindow(
-          title: label,
-          snippet: v.speed != null
-              ? '${(v.speed! * 3.6).toStringAsFixed(0)} km/h'
-              : '',
-        ),
-      );
-    }).toSet();
-  }
-
-  /// Picks a marker hue based on the vehicle's source agency/category.
-  double _vehicleMarkerColor(GTFSVehicle vehicle) {
-    // Trains: red (KTM has no category; prasarana trains don't have realtime)
-    // If routeId/vehicleId hints at train
-    final id = (vehicle.routeId ?? '').toLowerCase() +
-        (vehicle.label ?? '').toLowerCase();
-    if (id.contains('train') || id.contains('rail') || id.contains('ktm')) {
-      return BitmapDescriptor.hueRed;
+  /// Maps a Google vehicle type to an icon for transit leg display.
+  IconData _transitVehicleIcon(String vehicleType) {
+    switch (vehicleType.toUpperCase()) {
+      case 'BUS':
+        return Icons.directions_bus_rounded;
+      case 'SUBWAY':
+      case 'METRO':
+        return Icons.subway_rounded;
+      case 'TRAIN':
+      case 'RAIL':
+      case 'HEAVY_RAIL':
+      case 'COMMUTER_TRAIN':
+        return Icons.train_rounded;
+      case 'TRAM':
+      case 'LIGHT_RAIL':
+        return Icons.tram_rounded;
+      case 'MONORAIL':
+        return Icons.mode_fan_off_rounded;
+      default:
+        return Icons.directions_transit_rounded;
     }
-    // MRT feeder buses: orange
-    if (id.contains('feeder') || id.contains('mrt')) {
-      return BitmapDescriptor.hueOrange;
-    }
-    // Regular buses: blue
-    return BitmapDescriptor.hueBlue;
   }
 
   Widget _buildNoTransitCard() {

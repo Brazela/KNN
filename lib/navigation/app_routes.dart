@@ -41,6 +41,9 @@ abstract class AppRoutes {
   /// User profile route.
   static const String profile = '/profile';
 
+  /// Parking locator route.
+  static const String parkingLocator = '/parking-locator';
+
   /// Generates a route for the given [RouteSettings].
   ///
   /// Routes that do not yet have a dedicated screen return a placeholder
@@ -84,6 +87,8 @@ abstract class AppRoutes {
         return const _PlaceholderPage(title: 'Alerts & Emergency');
       case profile:
         return const _PlaceholderPage(title: 'Profile');
+      case parkingLocator:
+        return const ParkingLocatorPage();
       default:
         return const _PlaceholderPage(title: 'Page Not Found');
     }

@@ -68,6 +68,8 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
 
     _mode = args['mode'] as TravelMode?;
     _transitRoute = args['transitRoute'] as TransitRoute?;
+    _origin = args['origin'] as Location?;
+    _destination = args['destination'] as Location?;
     _weather = args['weather'] as Weather?;
     _polylinePoints =
         (args['polylinePoints'] as List<dynamic>?)?.cast<LatLng>() ?? [];
@@ -490,7 +492,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
             },
           ),
 
-          // Back button.
+          // Back button (top-left).
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -515,6 +517,80 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
                     color: AppColors.textPrimary,
                     size: 20,
                   ),
+                ),
+              ),
+            ),
+          ),
+
+          // Zoom controls (top-right).
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Align(
+                alignment: Alignment.topRight,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () => _mapController?.animateCamera(
+                        CameraUpdate.zoomIn(),
+                      ),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(12),
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x1A000000),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.add_rounded,
+                          color: AppColors.textPrimary,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: 32,
+                      height: 1,
+                      color: AppColors.border,
+                    ),
+                    GestureDetector(
+                      onTap: () => _mapController?.animateCamera(
+                        CameraUpdate.zoomOut(),
+                      ),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: const BorderRadius.vertical(
+                            bottom: Radius.circular(12),
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x1A000000),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.remove_rounded,
+                          color: AppColors.textPrimary,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

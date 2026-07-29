@@ -133,17 +133,7 @@ class _HomepageState extends State<Homepage> {
                         const SizedBox(height: 18),
                         const _ShortcutsRow(),
                         const SizedBox(height: 24),
-                        // Weather widget.
-                        if (!isLoadingLocation) ...[
-                          const WeatherWidget(),
-                          const SizedBox(height: 18),
-                        ],
-                        // Fuel price widget.
-                        if (!isLoadingLocation) ...[
-                          const FuelPriceWidget(),
-                          const SizedBox(height: 18),
-                        ],
-                        // Popular places.
+                        // Popular places — engaging explore content right after shortcuts.
                         if (!isLoadingLocation) ...[
                           PopularPlacesWidget(
                             onPlaceSelected: (place) {
@@ -153,6 +143,22 @@ class _HomepageState extends State<Homepage> {
                               );
                             },
                           ),
+                          const SizedBox(height: 18),
+                        ],
+                        // Weather widget — compact useful context.
+                        if (!isLoadingLocation) ...[
+                          const WeatherWidget(),
+                          const SizedBox(height: 18),
+                        ],
+                        // Fuel price widget.
+                        if (!isLoadingLocation) ...[
+                          const FuelPriceWidget(),
+                          const SizedBox(height: 18),
+                        ],
+                        // Parking locator shortcut — only visible when a
+                        // destination is set.
+                        if (!isLoadingLocation) ...[
+                          const ParkingShortcutWidget(),
                           const SizedBox(height: 18),
                         ],
                         const CostComparisonCard(),

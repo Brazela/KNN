@@ -250,7 +250,9 @@ class GoogleMapsService {
           'X-Goog-Api-Key': GoogleMapsConfig.apiKey,
           'X-Goog-FieldMask':
               'places.id,places.displayName,places.formattedAddress,'
-              'places.location,places.rating,places.userRatingCount,places.types',
+              'places.location,places.rating,places.userRatingCount,'
+              'places.types,places.photos,places.currentOpeningHours,'
+              'places.regularOpeningHours',
         },
         body: jsonEncode(body),
       );
@@ -269,6 +271,26 @@ class GoogleMapsService {
         final displayName = map['displayName'] as Map<String, dynamic>?;
         final loc = map['location'] as Map<String, dynamic>?;
 
+        // Extract photo URLs.
+        final photosList = map['photos'] as List<dynamic>? ?? [];
+        final photoUrls = photosList.take(3).map((photo) {
+          final photoMap = photo as Map<String, dynamic>;
+          final name = photoMap['name'] as String? ?? '';
+          return NearbyPlace.buildPhotoUrl(name, maxWidth: 400);
+        }).toList();
+
+        // Extract opening hours.
+        final currentHours =
+            map['currentOpeningHours'] as Map<String, dynamic>?;
+        final regularHours =
+            map['regularOpeningHours'] as Map<String, dynamic>?;
+        final hours = currentHours ?? regularHours;
+        final openNow = hours?['openNow'] as bool?;
+        final weekdayDescriptions =
+            (hours?['weekdayDescriptions'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList();
+
         return NearbyPlace(
           placeId: map['id'] as String? ?? '',
           name: displayName?['text'] as String? ?? 'Unknown',
@@ -282,12 +304,37 @@ class GoogleMapsService {
                   .toList() ??
               [],
           icon: null,
+          photoUrls: photoUrls,
+          openNow: openNow,
+          weekdayDescriptions: weekdayDescriptions,
         );
       }).toList();
     } on http.ClientException catch (e) {
       throw Exception(
           'Network error fetching nearby places: ${e.message} (uri: $uri)');
     }
+  }
+
+  /// Searches for parking lots near a given location.
+  ///
+  /// Convenience wrapper around [nearbySearch] with `type: 'parking'`.
+  /// [latitude] and [longitude] define the search center. [radius] is in
+  /// metres (default 1500). [keyword] optionally narrows results.
+  ///
+  /// Returns an empty list if no parking found; throws on error.
+  Future<List<NearbyPlace>> searchParkingNearby({
+    required double latitude,
+    required double longitude,
+    int radius = 1500,
+    String? keyword,
+  }) {
+    return nearbySearch(
+      latitude: latitude,
+      longitude: longitude,
+      radius: radius,
+      type: 'parking',
+      keyword: keyword,
+    );
   }
 
   /// Fetches turn-by-turn directions and a route polyline between two points.

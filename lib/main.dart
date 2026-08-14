@@ -29,8 +29,14 @@ class KNNApp extends StatelessWidget {
         Provider<GoogleMapsService>(create: (_) => GoogleMapsService()),
         Provider<NativePlacesService>(create: (_) => NativePlacesService()),
         Provider<LocationService>(create: (_) => const LocationService()),
+        Provider<TripHistoryService>(create: (_) => TripHistoryService()),
         ChangeNotifierProvider<TripProvider>(
-          create: (_) => TripProvider(),
+          create: (context) {
+            final provider = TripProvider();
+            final historyService = context.read<TripHistoryService>();
+            provider.initHistoryService(historyService);
+            return provider;
+          },
         ),
       ],
       child: MaterialApp(

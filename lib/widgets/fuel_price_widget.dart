@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/models.dart';
+import '../navigation/navigation.dart';
 import '../services/services.dart';
 import '../utils/constants.dart';
 
@@ -141,6 +142,24 @@ class _FuelPriceWidgetState extends State<FuelPriceWidget> {
                   ),
                 ),
               ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pushNamed(
+                  AppRoutes.fuelPriceHistory,
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text(
+                  'Details →',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -189,15 +208,13 @@ class _FuelPriceWidgetState extends State<FuelPriceWidget> {
             subtitle: 'Peninsular',
             color: const Color(0xFF1D4ED8),
           ),
-          if (fuel.dieselEastMsia != null) ...[
-            const SizedBox(height: 8),
-            _PriceRow(
-              label: 'Diesel',
-              price: fuel.dieselEastMsia!,
-              subtitle: 'East Malaysia',
-              color: const Color(0xFF7C3AED),
-            ),
-          ],
+          const SizedBox(height: 8),
+          _PriceRow(
+            label: 'Diesel',
+            price: fuel.dieselEastMsia,
+            subtitle: 'East Malaysia',
+            color: const Color(0xFF7C3AED),
+          ),
           // Optional subsidised price tiers.
           if (fuel.ron95Skps != null ||
               fuel.dieselBudi != null ||
@@ -353,7 +370,7 @@ class _PriceRow extends StatelessWidget {
   });
 
   final String label;
-  final double price;
+  final double? price;
   final String? subtitle;
   final Color color;
 
@@ -395,7 +412,7 @@ class _PriceRow extends StatelessWidget {
           ),
         ),
         Text(
-          'RM ${price.toStringAsFixed(2)}',
+          price != null ? 'RM ${price!.toStringAsFixed(2)}' : 'N/A',
           style: const TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,

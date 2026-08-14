@@ -5,6 +5,7 @@ import '../models/models.dart';
 import '../navigation/navigation.dart';
 import '../providers/providers.dart';
 import '../services/services.dart';
+import '../utils/address_utils.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/widgets.dart';
@@ -35,6 +36,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
   String _recommendationReason = '';
 
   TravelMode? _selectedMode;
+  Comparison? _comparison;
 
   /// Transit step details (line name, stops, vehicle type) for the best route.
   List<DirectionsStepInfo>? _transitStepInfos;
@@ -112,6 +114,26 @@ class _ComparisonPageState extends State<ComparisonPage> {
           _loading = false;
         });
       }
+
+      // Build comparison object for persistence.
+      final bestTransit = transitRoutes.isNotEmpty ? transitRoutes.first : TransitRoute(
+        id: 'none',
+        name: 'No transit',
+        type: TransitMode.unknown,
+        stops: [],
+        durationMinutes: 0,
+        transfers: 0,
+        fare: 0,
+      );
+      _comparison = Comparison(
+        origin: origin,
+        destination: destination,
+        transitOption: bestTransit,
+        drivingOption: drivingRoute,
+        recommendation: recommendation.$1,
+        recommendationReason: recommendation.$2,
+        weather: originForecasts.isNotEmpty ? originForecasts.first : null,
+      );
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -424,6 +446,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
           'origin': origin,
           'destination': destination,
           'weather': _originWeather,
+          'comparison': _comparison,
         },
       );
     } else if (_selectedMode == TravelMode.driving && _drivingRoute != null) {
@@ -435,6 +458,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
           'origin': origin,
           'destination': destination,
           'weather': _originWeather,
+          'comparison': _comparison,
         },
       );
     }
@@ -510,7 +534,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${_shortAddress(origin)} → ${_shortAddress(destination)}',
+                  '${shortAddress(origin)} → ${shortAddress(destination)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -852,17 +876,6 @@ class _ComparisonPageState extends State<ComparisonPage> {
         ),
       ),
     );
-  }
-
-  String _shortAddress(Location? location) {
-    if (location == null) return 'Unknown';
-    final address = location.address ?? '';
-    if (address.isEmpty) {
-      return '${location.latitude.toStringAsFixed(3)}, ${location.longitude.toStringAsFixed(3)}';
-    }
-    // Take first part before comma for brevity.
-    final parts = address.split(',');
-    return parts.first.trim();
   }
 
   String _transitModeLabel(TransitMode mode) {

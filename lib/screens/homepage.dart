@@ -174,7 +174,13 @@ class _HomepageState extends State<Homepage> {
       ),
       bottomNavigationBar: BottomNav(
         currentIndex: _bottomNavIndex,
-        onTap: (index) => setState(() => _bottomNavIndex = index),
+        onTap: (index) {
+          if (index == 1) {
+            Navigator.of(context).pushNamed(AppRoutes.tripHistory);
+          } else {
+            setState(() => _bottomNavIndex = index);
+          }
+        },
       ),
     );
   }

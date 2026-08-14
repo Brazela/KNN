@@ -41,6 +41,12 @@ abstract class AppRoutes {
   /// User profile route.
   static const String profile = '/profile';
 
+  /// Fuel price history route.
+  static const String fuelPriceHistory = '/fuel-price-history';
+
+  /// Weather history route.
+  static const String weatherHistory = '/weather-history';
+
   /// Parking locator route.
   static const String parkingLocator = '/parking-locator';
 
@@ -61,7 +67,7 @@ abstract class AppRoutes {
   static Widget _buildPage(String? name, Object? arguments) {
     switch (name) {
       case home:
-      // Home is provided by the initial route in main.dart.
+        // Home is provided by the initial route in main.dart.
         return const _PlaceholderPage(title: 'Home');
       case searchDestination:
         return SearchDestinationPage(
@@ -75,8 +81,12 @@ abstract class AppRoutes {
         return const RouteDetailsPage();
       case liveTracking:
         return const LiveTrackingPage();
+      case fuelPriceHistory:
+        return const FuelPriceHistoryPage();
+      case weatherHistory:
+        return const WeatherHistoryPage();
       case tripHistory:
-        return const _PlaceholderPage(title: 'Trip History');
+        return const TripHistoryPage();
       case favorites:
         return const _PlaceholderPage(title: 'Favorites');
       case notifications:
@@ -118,10 +128,7 @@ class _PlaceholderPage extends StatelessWidget {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            Text(title, style: Theme.of(context).textTheme.bodyMedium),
           ],
         ),
       ),

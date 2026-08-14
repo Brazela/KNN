@@ -21,6 +21,14 @@ class Trip {
     required this.timeMinutes,
     required this.date,
     this.weather,
+    this.transitCost,
+    this.transitTime,
+    this.drivingCost,
+    this.drivingTime,
+    this.recommendedMode,
+    this.followedRecommendation,
+    this.savingsCost,
+    this.savingsTime,
   });
 
   /// Creates a [Trip] from a JSON map.
@@ -50,6 +58,30 @@ class Trip {
 
   /// Optional weather snapshot for the trip date.
   final Weather? weather;
+
+  /// Recommended transit cost in MYR.
+  final double? transitCost;
+
+  /// Recommended transit time in minutes.
+  final int? transitTime;
+
+  /// Recommended driving cost in MYR.
+  final double? drivingCost;
+
+  /// Recommended driving time in minutes.
+  final int? drivingTime;
+
+  /// Recommended travel mode ('transit' or 'driving').
+  final String? recommendedMode;
+
+  /// Whether the user followed the recommendation (0 = no, 1 = yes).
+  final int? followedRecommendation;
+
+  /// Cost savings from following the recommendation in MYR.
+  final double? savingsCost;
+
+  /// Time savings from following the recommendation in minutes.
+  final int? savingsTime;
 
   static TravelMode _modeFromJson(String value) {
     switch (value) {

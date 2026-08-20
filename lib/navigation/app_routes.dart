@@ -35,9 +35,6 @@ abstract class AppRoutes {
   /// Settings route.
   static const String settings = '/settings';
 
-  /// Alerts and emergency route.
-  static const String alertsEmergency = '/alerts-emergency';
-
   /// User profile route.
   static const String profile = '/profile';
 
@@ -93,8 +90,6 @@ abstract class AppRoutes {
         return const _PlaceholderPage(title: 'Notifications');
       case settings:
         return const _PlaceholderPage(title: 'Settings');
-      case alertsEmergency:
-        return const _PlaceholderPage(title: 'Alerts & Emergency');
       case profile:
         return const _PlaceholderPage(title: 'Profile');
       case parkingLocator:

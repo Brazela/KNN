@@ -166,26 +166,47 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
     }
   }
 
-  void _selectRecent() {
-    final recent = context.read<TripProvider>().recentTrips;
-    if (recent.isNotEmpty) {
-      final loc = recent.first.origin;
-      setState(() {
-        _selectedOrigin = loc;
-        _selectedOriginLabel = 'Recent: ${loc.address ?? 'Saved'}';
-        _pickerCenter = LatLng(loc.latitude, loc.longitude);
-        _searchController.text = '🕐 ${loc.address ?? 'Recent'}';
-      });
-    }
-  }
-
   // --- Confirm ---
 
   void _confirm() {
     if (_selectedOrigin == null) return;
 
-    context.read<TripProvider>().setOrigin(_selectedOrigin!);
+    final tripProvider = context.read<TripProvider>();
+    final destination = tripProvider.destination;
+
+    if (destination != null && _isSameLocation(_selectedOrigin!, destination)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Origin and destination can\'t be the same place. '
+            'Please pick a different location.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    tripProvider.setOrigin(_selectedOrigin!);
     Navigator.of(context).pushNamed(AppRoutes.comparison);
+  }
+
+  /// Returns true when [a] and [b] refer to the same place, either by
+  /// matching Google place IDs or by matching coordinates (rounded to
+  /// ~5 decimal places, roughly 1 m).
+  bool _isSameLocation(Location a, Location b) {
+    if (a.placeId != null &&
+        b.placeId != null &&
+        a.placeId!.isNotEmpty &&
+        a.placeId == b.placeId) {
+      return true;
+    }
+
+    const precision = 5;
+    final latA = double.parse(a.latitude.toStringAsFixed(precision));
+    final lngA = double.parse(a.longitude.toStringAsFixed(precision));
+    final latB = double.parse(b.latitude.toStringAsFixed(precision));
+    final lngB = double.parse(b.longitude.toStringAsFixed(precision));
+    return latA == latB && lngA == lngB;
   }
 
   // --- Map picker ---
@@ -338,14 +359,6 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
                     label: 'Work',
                     color: AppColors.success,
                     onTap: _selectWork,
-                  ),
-                // Recent.
-                if (tripProvider.recentTrips.isNotEmpty)
-                  _QuickChip(
-                    icon: Icons.history_rounded,
-                    label: 'Recent',
-                    color: const Color(0xFF6B7280),
-                    onTap: _selectRecent,
                   ),
               ],
             ),

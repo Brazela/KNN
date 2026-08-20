@@ -13,6 +13,7 @@ class TripProvider extends ChangeNotifier {
   Location? _work;
   List<Trip> _recentTrips = [];
   TripHistoryService? _tripHistoryService;
+  SavedPlacesService? _savedPlaces;
 
   Location? get origin => _origin;
   Location? get destination => _destination;
@@ -38,11 +39,25 @@ class TripProvider extends ChangeNotifier {
 
   void setHome(Location location) {
     _home = location;
+    unawaited(_savedPlaces?.setHome(location).catchError((_) {}));
     notifyListeners();
   }
 
   void setWork(Location location) {
     _work = location;
+    unawaited(_savedPlaces?.setWork(location).catchError((_) {}));
+    notifyListeners();
+  }
+
+  void clearHome() {
+    _home = null;
+    unawaited(_savedPlaces?.setHome(null).catchError((_) {}));
+    notifyListeners();
+  }
+
+  void clearWork() {
+    _work = null;
+    unawaited(_savedPlaces?.setWork(null).catchError((_) {}));
     notifyListeners();
   }
 
@@ -66,6 +81,14 @@ class TripProvider extends ChangeNotifier {
   Future<void> initHistoryService(TripHistoryService service) async {
     _tripHistoryService = service;
     _recentTrips = await service.getTrips(limit: 10);
+    notifyListeners();
+  }
+
+  /// Loads the saved Home and Work places from on-device storage.
+  Future<void> initSavedPlaces(SavedPlacesService service) async {
+    _savedPlaces = service;
+    _home = await service.getHome();
+    _work = await service.getWork();
     notifyListeners();
   }
 

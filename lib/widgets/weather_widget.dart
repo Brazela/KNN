@@ -6,6 +6,7 @@ import '../providers/providers.dart';
 import '../services/services.dart';
 import '../navigation/app_routes.dart';
 import '../utils/constants.dart';
+import '../utils/weather_utils.dart';
 
 /// Displays the current weather forecast for the user's location.
 ///
@@ -75,56 +76,6 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     return '🌤️';
   }
 
-  /// Translates a Malay weather summary to English.
-  String _translateWeather(String text) {
-    final lower = text.toLowerCase().trim();
-
-    // Whole-phrase matches first.
-    if (lower == 'tiada hujan') return 'No rain';
-    if (lower == 'hujan ringan') return 'Light rain';
-    if (lower == 'hujan sederhana') return 'Moderate rain';
-    if (lower == 'hujan lebat') return 'Heavy rain';
-    if (lower == 'hujan berpetir') return 'Thunderstorms';
-    if (lower == 'hujan ribut') return 'Rain with storm';
-    if (lower == 'ribut petir') return 'Thunderstorm';
-    if (lower == 'kabus') return 'Foggy';
-    if (lower == 'panas') return 'Hot';
-    if (lower == 'cerah') return 'Clear';
-    if (lower == 'cerah terang') return 'Bright & clear';
-    if (lower == 'mendung') return 'Cloudy';
-    if (lower == 'berawan') return 'Cloudy';
-    if (lower == 'berangin') return 'Windy';
-
-    // Fallback: replace individual keywords so partial matches still work.
-    var result = text;
-    const replacements = {
-      'Tiada hujan': 'No rain',
-      'Hujan lebat': 'Heavy rain',
-      'Hujan sederhana': 'Moderate rain',
-      'Hujan ringan': 'Light rain',
-      'Hujan berpetir': 'Thunderstorms',
-      'Hujan': 'Rain',
-      'Ribut petir': 'Thunderstorm',
-      'Ribut': 'Storm',
-      'Petir': 'Thunder',
-      'Mendung': 'Cloudy',
-      'Berawan': 'Cloudy',
-      'Cerah terang': 'Bright & clear',
-      'Cerah': 'Clear',
-      'Panas': 'Hot',
-      'Kabus': 'Foggy',
-      'Berangin': 'Windy',
-      'Pagi': 'Morning',
-      'Petang': 'Evening',
-      'Malam': 'Night',
-      'Tengahari': 'Afternoon',
-    };
-    for (final entry in replacements.entries) {
-      result = result.replaceAll(entry.key, entry.value);
-    }
-    return result;
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_loading && _weather == null) {
@@ -151,7 +102,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     }
 
     final weather = _weather!;
-    final translatedSummary = _translateWeather(weather.summaryForecast);
+    final translatedSummary = translateWeather(weather.summaryForecast);
     final emoji = _weatherEmoji(weather.summaryForecast);
 
     return Container(
@@ -230,7 +181,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      weather.summaryForecast,
+                      translatedSummary,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(

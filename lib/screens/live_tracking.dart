@@ -10,6 +10,8 @@ import '../navigation/navigation.dart';
 import '../services/services.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../utils/map_markers.dart';
+import '../utils/weather_utils.dart';
 
 /// Live tracking screen for both transit and driving trips.
 ///
@@ -48,6 +50,9 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
   double _progress = 0.0;
   String _etaText = 'Calculating…';
   String? _statusMessage;
+
+  /// Tracks previous vehicle samples to estimate speed.
+  final Map<String, ({LatLng pos, int ts})> _vehicleSamples = {};
 
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
@@ -215,7 +220,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
           _currentVehicle = matched;
           _statusMessage = null;
         });
-        _updateVehicleMarker(matched);
+        await _updateVehicleMarker(matched);
         _calculateTransitProgress(matched);
       } else if (mounted) {
         setState(() => _statusMessage = 'No realtime vehicle data available');
@@ -250,20 +255,47 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
   }
 
   /// Adds or updates the vehicle marker on the map.
-  void _updateVehicleMarker(GTFSVehicle vehicle) {
+  Future<void> _updateVehicleMarker(GTFSVehicle vehicle) async {
     if (vehicle.latitude == null || vehicle.longitude == null) return;
+
+    // Estimate speed from consecutive samples (fall back to feed speed).
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final ts = vehicle.timestamp ?? now;
+    final prev = _vehicleSamples[vehicle.vehicleId];
+    _vehicleSamples[vehicle.vehicleId] = (
+      pos: LatLng(vehicle.latitude!, vehicle.longitude!),
+      ts: ts,
+    );
+    double? speedKmh;
+    if (prev != null && ts - prev.ts > 0) {
+      final distKm = calculateDistance(
+        prev.pos.latitude,
+        prev.pos.longitude,
+        vehicle.latitude!,
+        vehicle.longitude!,
+      );
+      speedKmh = (distKm / (ts - prev.ts)) * 3600;
+    }
+    final feedMs = vehicle.speed ?? 0;
+    final feedKmh = (feedMs > 0.5 && feedMs < 33.4) ? feedMs * 3.6 : null;
+    final effectiveKmh = speedKmh ?? feedKmh;
+
+    // Transit → red bus icon; driving → keep pin.
+    final icon = _mode == TravelMode.transit
+        ? await getVehicleMarker('BUS', highlightColor: true)
+        : BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
 
     _markers.removeWhere((m) => m.markerId.value == 'vehicle');
     _markers.add(
       Marker(
         markerId: const MarkerId('vehicle'),
         position: LatLng(vehicle.latitude!, vehicle.longitude!),
-        icon: BitmapDescriptor.defaultMarkerWithHue(
-          BitmapDescriptor.hueAzure,
-        ),
+        icon: icon,
         infoWindow: InfoWindow(
           title: vehicle.label ?? 'Vehicle',
-          snippet: 'Speed: ${((vehicle.speed ?? 0) * 3.6).toStringAsFixed(0)} km/h',
+          snippet: effectiveKmh != null
+              ? 'Speed: ${effectiveKmh.toStringAsFixed(0)} km/h'
+              : 'Speed: N/A',
         ),
         rotation: vehicle.bearing ?? 0,
       ),
@@ -413,10 +445,13 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
   }
 
   /// Navigates back to the comparison screen for an alternative route.
+  ///
+  /// Pops back to the existing comparison page in the navigation stack so
+  /// the user can still go back to change the origin/destination afterwards
+  /// (instead of wiping the stack and landing on the homepage).
   void _alternativeRoute() {
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      AppRoutes.comparison,
-      (route) => route.isFirst,
+    Navigator.of(context).popUntil(
+      (route) => route.settings.name == AppRoutes.comparison,
     );
   }
 
@@ -827,11 +862,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
 
   bool _hasRainForecast() {
     if (_weather == null) return false;
-    final summary = _weather!.summaryForecast.toLowerCase();
-    return summary.contains('hujan') ||
-        summary.contains('ribut') ||
-        summary.contains('petir') ||
-        summary.contains('mendung');
+    return isRaining(_weather!.summaryForecast);
   }
 }
 

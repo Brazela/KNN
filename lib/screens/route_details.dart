@@ -50,6 +50,9 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
   Timer? _realtimeTimer;
   List<String> _vehicleEtaMessages = [];
 
+  /// Tracks previous vehicle samples (per vehicle) to estimate speed.
+  final Map<String, ({LatLng pos, int ts})> _vehicleSamples = {};
+
   /// Transit step infos from Directions API (only transit steps).
   List<DirectionsStepInfo> _transitStepInfos = [];
 
@@ -362,7 +365,10 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
             v.latitude!, v.longitude!,
             departureCoords.latitude, departureCoords.longitude,
           );
-          return dist < 5.0; // within 5 km of departure station
+          if (dist >= 5.0) return false; // too far
+          // Skip buses that have already passed the station.
+          if (!_isApproachingStation(v, departureCoords)) return false;
+          return true;
         }
         return true;
       }).toList();
@@ -379,10 +385,13 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
         final plate = v.label ?? v.vehicleId;
         final lineTag = lineNames.isNotEmpty ? lineNames.first : '';
 
-        // Calculate actual speed in km/h (GTFS speed is in m/s).
-        final speedMs = v.speed ?? 0;
-        final speedKmh = (speedMs > 0.5 && speedMs < 33.4) // 0.5–120 km/h
-            ? '${(speedMs * 3.6).toStringAsFixed(0)} km/h'
+        // Speed: prefer position-derived estimate, else feed speed.
+        final estimatedKmh = _estimateSpeedKmh(v);
+        final feedMs = v.speed ?? 0;
+        final feedKmh = (feedMs > 0.5 && feedMs < 33.4) ? feedMs * 3.6 : null;
+        final effectiveKmh = estimatedKmh ?? feedKmh;
+        final speedKmh = effectiveKmh != null
+            ? '${effectiveKmh.toStringAsFixed(0)} km/h'
             : '';
 
         // Distance from vehicle to departure station.
@@ -401,10 +410,8 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
         // ETA using actual vehicle speed if available.
         String? etaText;
         if (distToStation < 5.0) {
-          final effectiveSpeedKmh = speedMs > 0.5
-              ? speedMs * 3.6
-              : _defaultSpeedKmh(vehicleType);
-          final etaMinutes = ((distToStation / effectiveSpeedKmh) * 60).ceil();
+          final etaSpeedKmh = effectiveKmh ?? _defaultSpeedKmh(vehicleType);
+          final etaMinutes = ((distToStation / etaSpeedKmh) * 60).ceil();
           etaText = etaMinutes <= 1 ? '<1 min away' : '$etaMinutes min away';
         }
 
@@ -413,10 +420,8 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
           nearestDist = distToStation;
           nearestVehicle = v;
           if (distToStation < 5.0) {
-            final effectiveSpeedKmh = v.speed != null && v.speed! > 0.5
-                ? v.speed! * 3.6
-                : _defaultSpeedKmh(vehicleType);
-            final etaMin = ((distToStation / effectiveSpeedKmh) * 60).ceil();
+            final etaSpeedKmh = effectiveKmh ?? _defaultSpeedKmh(vehicleType);
+            final etaMin = ((distToStation / etaSpeedKmh) * 60).ceil();
             final etaStr = etaMin <= 1 ? '<1 min' : '$etaMin min';
             nearestEtaMsg = '$lineTag $plate arriving at $departureStationName in $etaStr';
           }
@@ -465,6 +470,45 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
     } catch (_) {
       // Silently ignore.
     }
+  }
+
+  /// Returns true when the vehicle is heading toward the station (not passed).
+  bool _isApproachingStation(GTFSVehicle v, LatLng station) {
+    final bearing = v.bearing;
+    if (bearing == null || v.latitude == null || v.longitude == null) {
+      return true; // no bearing data → assume approaching
+    }
+    final toStation = bearingBetween(
+      v.latitude!,
+      v.longitude!,
+      station.latitude,
+      station.longitude,
+    );
+    var diff = (bearing - toStation).abs() % 360;
+    if (diff > 180) diff = 360 - diff;
+    return diff <= 90; // heading within 90° of the station
+  }
+
+  /// Estimates speed (km/h) from consecutive position samples.
+  double? _estimateSpeedKmh(GTFSVehicle v) {
+    if (v.latitude == null || v.longitude == null) return null;
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final ts = v.timestamp ?? now;
+    final prev = _vehicleSamples[v.vehicleId];
+    _vehicleSamples[v.vehicleId] = (
+      pos: LatLng(v.latitude!, v.longitude!),
+      ts: ts,
+    );
+    if (prev == null) return null;
+    final dt = (ts - prev.ts).abs();
+    if (dt <= 0) return null;
+    final distKm = calculateDistance(
+      prev.pos.latitude,
+      prev.pos.longitude,
+      v.latitude!,
+      v.longitude!,
+    );
+    return (distKm / dt) * 3600;
   }
 
   /// Returns a reasonable default speed (km/h) for a vehicle type when
@@ -888,14 +932,21 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
 
               // Steps list — uses string steps as primary (always reliable),
               // enhanced with icons/durations from stepInfos when available.
+              // Driving: skips the first step (index 0) which is the user's
+              // current location ("Head to current location") — not useful.
+              // Transit: keeps all steps so the first one is always the walk
+              // to the station ("find a way to go to the station").
               Expanded(
                 child: ListView.builder(
                   controller: scrollController,
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: (_directions?.steps.length ?? 0) + 1,
+                  itemCount:
+                      (_directions?.steps.length ?? 0) +
+                      (_mode == TravelMode.driving ? 0 : 1),
                   itemBuilder: (context, index) {
                     final steps = _directions!.steps;
-                    if (index == steps.length) {
+                    final skipFirstStep = _mode == TravelMode.driving;
+                    if (index == steps.length - (skipFirstStep ? 1 : 0)) {
                       // Start trip button at the bottom.
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -922,13 +973,15 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
                     }
 
                     // Determine the best icon and duration for this step.
+                    // +1 offset only for driving: skip current-location step.
+                    final stepIndex = index + (skipFirstStep ? 1 : 0);
                     final stepInfos = _directions?.stepInfos ?? [];
-                    final hasRich = index < stepInfos.length;
+                    final hasRich = stepIndex < stepInfos.length;
                     IconData stepIcon;
                     String? duration;
 
                     if (hasRich) {
-                      final si = stepInfos[index];
+                      final si = stepInfos[stepIndex];
                       final durSec = si.durationSeconds;
                       if (si.travelMode == 'WALKING') {
                         stepIcon = Icons.directions_walk_rounded;
@@ -939,22 +992,22 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
                         );
                         duration = durSec > 0 ? '${(durSec / 60).ceil()}m' : '';
                       } else {
-                        stepIcon = _stepIcon(steps[index]);
+                        stepIcon = _stepIcon(steps[stepIndex]);
                         duration = durSec > 0 ? '${(durSec / 60).ceil()}m' : '';
                       }
                     } else {
-                      stepIcon = _stepIcon(steps[index]);
+                      stepIcon = _stepIcon(steps[stepIndex]);
                       duration = '';
                     }
 
                     // Build the description: use string step as primary text,
                     // with transit line details from stepInfos as a subtitle.
-                    final stepText = steps[index];
+                    final stepText = steps[stepIndex];
                     String description;
                     if (hasRich &&
-                        stepInfos[index].travelMode == 'TRANSIT' &&
-                        stepInfos[index].transitInfo != null) {
-                      final ti = stepInfos[index].transitInfo!;
+                        stepInfos[stepIndex].travelMode == 'TRANSIT' &&
+                        stepInfos[stepIndex].transitInfo != null) {
+                      final ti = stepInfos[stepIndex].transitInfo!;
                       description = '$stepText\n'
                           '  ${ti.vehicleName}: ${ti.lineName}'
                           '  · ${ti.departureStop} → ${ti.arrivalStop}'

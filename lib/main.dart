@@ -30,11 +30,13 @@ class KNNApp extends StatelessWidget {
         Provider<NativePlacesService>(create: (_) => NativePlacesService()),
         Provider<LocationService>(create: (_) => const LocationService()),
         Provider<TripHistoryService>(create: (_) => TripHistoryService()),
+        Provider<SavedPlacesService>(create: (_) => SavedPlacesService()),
         ChangeNotifierProvider<TripProvider>(
           create: (context) {
             final provider = TripProvider();
             final historyService = context.read<TripHistoryService>();
             provider.initHistoryService(historyService);
+            provider.initSavedPlaces(context.read<SavedPlacesService>());
             return provider;
           },
         ),

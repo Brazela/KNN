@@ -250,7 +250,9 @@ class GoogleMapsService {
           'X-Goog-Api-Key': GoogleMapsConfig.apiKey,
           'X-Goog-FieldMask':
               'places.id,places.displayName,places.formattedAddress,'
-              'places.location,places.rating,places.userRatingCount,places.types',
+              'places.location,places.rating,places.userRatingCount,'
+              'places.types,places.photos,places.currentOpeningHours,'
+              'places.regularOpeningHours',
         },
         body: jsonEncode(body),
       );
@@ -269,6 +271,26 @@ class GoogleMapsService {
         final displayName = map['displayName'] as Map<String, dynamic>?;
         final loc = map['location'] as Map<String, dynamic>?;
 
+        // Extract photo URLs.
+        final photosList = map['photos'] as List<dynamic>? ?? [];
+        final photoUrls = photosList.take(3).map((photo) {
+          final photoMap = photo as Map<String, dynamic>;
+          final name = photoMap['name'] as String? ?? '';
+          return NearbyPlace.buildPhotoUrl(name, maxWidth: 400);
+        }).toList();
+
+        // Extract opening hours.
+        final currentHours =
+            map['currentOpeningHours'] as Map<String, dynamic>?;
+        final regularHours =
+            map['regularOpeningHours'] as Map<String, dynamic>?;
+        final hours = currentHours ?? regularHours;
+        final openNow = hours?['openNow'] as bool?;
+        final weekdayDescriptions =
+            (hours?['weekdayDescriptions'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList();
+
         return NearbyPlace(
           placeId: map['id'] as String? ?? '',
           name: displayName?['text'] as String? ?? 'Unknown',
@@ -282,12 +304,37 @@ class GoogleMapsService {
                   .toList() ??
               [],
           icon: null,
+          photoUrls: photoUrls,
+          openNow: openNow,
+          weekdayDescriptions: weekdayDescriptions,
         );
       }).toList();
     } on http.ClientException catch (e) {
       throw Exception(
           'Network error fetching nearby places: ${e.message} (uri: $uri)');
     }
+  }
+
+  /// Searches for parking lots near a given location.
+  ///
+  /// Convenience wrapper around [nearbySearch] with `type: 'parking'`.
+  /// [latitude] and [longitude] define the search center. [radius] is in
+  /// metres (default 1500). [keyword] optionally narrows results.
+  ///
+  /// Returns an empty list if no parking found; throws on error.
+  Future<List<NearbyPlace>> searchParkingNearby({
+    required double latitude,
+    required double longitude,
+    int radius = 1500,
+    String? keyword,
+  }) {
+    return nearbySearch(
+      latitude: latitude,
+      longitude: longitude,
+      radius: radius,
+      type: 'parking',
+      keyword: keyword,
+    );
   }
 
   /// Fetches turn-by-turn directions and a route polyline between two points.
@@ -416,6 +463,24 @@ class GoogleMapsService {
         final distText = stepDistance?['text'] as String? ?? '';
         steps.add('$instruction${distText.isNotEmpty ? ' ($distText)' : ''}');
 
+        // Parse step start/end coordinates.
+        LatLng? startLatLng;
+        LatLng? endLatLng;
+        final startLoc = step['start_location'] as Map<String, dynamic>?;
+        final endLoc = step['end_location'] as Map<String, dynamic>?;
+        if (startLoc != null) {
+          startLatLng = LatLng(
+            (startLoc['lat'] as num).toDouble(),
+            (startLoc['lng'] as num).toDouble(),
+          );
+        }
+        if (endLoc != null) {
+          endLatLng = LatLng(
+            (endLoc['lat'] as num).toDouble(),
+            (endLoc['lng'] as num).toDouble(),
+          );
+        }
+
         // Parse transit-specific details.
         TransitStepInfo? transitInfo;
         if (travelMode == 'TRANSIT') {
@@ -447,6 +512,8 @@ class GoogleMapsService {
           durationSeconds: stepDuration?['value'] as int? ?? 0,
           travelMode: travelMode,
           transitInfo: transitInfo,
+          startLatLng: startLatLng,
+          endLatLng: endLatLng,
         ));
       }
     }
@@ -520,6 +587,8 @@ class DirectionsStepInfo {
     required this.durationSeconds,
     required this.travelMode,
     this.transitInfo,
+    this.startLatLng,
+    this.endLatLng,
   });
 
   /// Clean (HTML-stripped) instruction text.
@@ -536,6 +605,12 @@ class DirectionsStepInfo {
 
   /// Transit line and stop details, non-null only when [travelMode] is `'TRANSIT'`.
   final TransitStepInfo? transitInfo;
+
+  /// Coordinates where this step starts, if available.
+  final LatLng? startLatLng;
+
+  /// Coordinates where this step ends, if available.
+  final LatLng? endLatLng;
 }
 
 /// Transit-specific details for a transit step in a Directions API route.

@@ -1,5 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
+import '../utils/constants.dart';
+
 part 'nearby_place.g.dart';
 
 /// A place returned by the Google Places Nearby Search API.
@@ -19,6 +21,9 @@ class NearbyPlace {
     required this.longitude,
     this.types = const [],
     this.icon,
+    this.photoUrls = const [],
+    this.openNow,
+    this.weekdayDescriptions,
   });
 
   /// Creates a [NearbyPlace] from a JSON map.
@@ -52,6 +57,38 @@ class NearbyPlace {
   /// URL to the Google-provided category icon.
   final String? icon;
 
+  /// Photo image URLs fetched from Google Places (up to 3).
+  final List<String> photoUrls;
+
+  /// Whether the place is currently open (from `currentOpeningHours`).
+  final bool? openNow;
+
+  /// Human-readable weekday descriptions, e.g.
+  /// `["Monday: 9:00 AM – 9:00 PM", ...]`.
+  final List<String>? weekdayDescriptions;
+
   /// Converts this [NearbyPlace] to a JSON map.
   Map<String, dynamic> toJson() => _$NearbyPlaceToJson(this);
+
+  /// Builds a Google Places photo URL from a photo resource name.
+  static String buildPhotoUrl(String photoName, {int maxWidth = 400}) {
+    return 'https://places.googleapis.com/v1/$photoName/media'
+        '?key=${GoogleMapsConfig.apiKey}&maxWidthPx=$maxWidth';
+  }
+
+  /// Returns the first available photo URL, or `null`.
+  String? get firstPhotoUrl => photoUrls.isNotEmpty ? photoUrls.first : null;
+
+  /// A short summary of opening hours suitable for display.
+  String? get hoursSummary {
+    if (openNow == true) return 'Open now';
+    if (openNow == false) return 'Closed now';
+    return null;
+  }
+
+  /// The first weekday description, or `null`.
+  String? get hoursDetail =>
+      (weekdayDescriptions != null && weekdayDescriptions!.isNotEmpty)
+          ? weekdayDescriptions!.first
+          : null;
 }

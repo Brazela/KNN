@@ -2,21 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../utils/constants.dart';
 
-/// Top app bar with logo, notification icon, alert icon, and profile icon.
+/// Top app bar with logo, notification icon, and profile icon.
 class TopBar extends StatelessWidget {
   /// Creates a [TopBar].
   const TopBar({
     this.onNotificationTap,
-    this.onAlertTap,
     this.onProfileTap,
     super.key,
   });
 
   /// Called when the notification icon is tapped.
   final VoidCallback? onNotificationTap;
-
-  /// Called when the alert icon is tapped.
-  final VoidCallback? onAlertTap;
 
   /// Called when the profile icon is tapped.
   final VoidCallback? onProfileTap;
@@ -25,24 +21,8 @@ class TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Center(
-            child: Icon(
-              Icons.directions_transit_rounded,
-              color: Colors.white,
-              size: 22,
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
         const Text(
-          'KNN',
+          'TripCerdas',
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w800,
@@ -54,11 +34,6 @@ class TopBar extends StatelessWidget {
         _IconButton(
           icon: Icons.notifications_outlined,
           onTap: onNotificationTap,
-        ),
-        const SizedBox(width: 8),
-        _IconButton(
-          icon: Icons.warning_amber_rounded,
-          onTap: onAlertTap,
         ),
         const SizedBox(width: 8),
         _IconButton(

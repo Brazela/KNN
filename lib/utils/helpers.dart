@@ -1,4 +1,4 @@
-import 'dart:math' show cos, sqrt, asin, pi, sin;
+import 'dart:math' show cos, sqrt, asin, pi, sin, atan2;
 
 import 'package:intl/intl.dart';
 
@@ -86,4 +86,14 @@ Duration parseGTFSTime(String time) {
   final seconds = int.tryParse(parts[2]) ?? 0;
 
   return Duration(hours: hours, minutes: minutes, seconds: seconds);
+}
+
+/// Calculates the initial bearing (degrees, 0–360) from point A to point B.
+double bearingBetween(double lat1, double lng1, double lat2, double lng2) {
+  final dLng = _degreesToRadians(lng2 - lng1);
+  final y = sin(dLng) * cos(_degreesToRadians(lat2));
+  final x = cos(_degreesToRadians(lat1)) * sin(_degreesToRadians(lat2)) -
+      sin(_degreesToRadians(lat1)) * cos(_degreesToRadians(lat2)) * cos(dLng);
+  final bearing = atan2(y, x) * 180 / pi;
+  return (bearing + 360) % 360;
 }

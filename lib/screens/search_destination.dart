@@ -24,14 +24,33 @@ class SearchDestinationPage extends StatefulWidget {
   ///
   /// If [openMapPicker] is true, the page opens directly into the full-
   /// screen map-picker mode for pinning a location on the map.
-  const SearchDestinationPage({this.initialPlace, this.openMapPicker = false, super.key});
+  const SearchDestinationPage({
+    this.initialPlace,
+    this.initialLocation,
+    this.openMapPicker = false,
+    this.onPlacePicked,
+    this.confirmLabel,
+    super.key,
+  });
 
   /// An optional nearby place to pre-fill, bypassing the search step.
   final NearbyPlace? initialPlace;
 
+  /// An optional saved [Location] (e.g. Home/Work) to pre-fill, bypassing
+  /// the search step.
+  final Location? initialLocation;
+
   /// If true, the full-screen map picker is shown immediately on open
   /// instead of the search interface.
   final bool openMapPicker;
+
+  /// When provided, the page runs in "save a place" mode: confirming a
+  /// selection calls this callback with the picked [Location] and pops
+  /// back instead of continuing the trip flow.
+  final Future<void> Function(Location location)? onPlacePicked;
+
+  /// Overrides the confirm button label (e.g. "Save as Home").
+  final String? confirmLabel;
 
   @override
   State<SearchDestinationPage> createState() => _SearchDestinationPageState();
@@ -65,6 +84,17 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
       );
       _pickerCenter = LatLng(p.latitude, p.longitude);
       _searchController.text = p.name;
+    } else if (widget.initialLocation != null) {
+      final loc = widget.initialLocation!;
+      _selectedPlace = PlaceDetail(
+        placeId: loc.placeId ?? '',
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        formattedAddress: loc.address ?? 'Saved location',
+        name: loc.address,
+      );
+      _pickerCenter = LatLng(loc.latitude, loc.longitude);
+      _searchController.text = loc.address ?? 'Saved location';
     }
 
     // Auto-focus the search field after the first frame so the keyboard
@@ -161,15 +191,21 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
   void _confirm() {
     if (_selectedPlace == null) return;
 
-    context.read<TripProvider>().setDestination(
-          Location(
-            latitude: _selectedPlace!.latitude,
-            longitude: _selectedPlace!.longitude,
-            address: _selectedPlace!.formattedAddress,
-            placeId: _selectedPlace!.placeId,
-          ),
-        );
+    final location = Location(
+      latitude: _selectedPlace!.latitude,
+      longitude: _selectedPlace!.longitude,
+      address: _selectedPlace!.formattedAddress,
+      placeId: _selectedPlace!.placeId,
+    );
 
+    final onPlacePicked = widget.onPlacePicked;
+    if (onPlacePicked != null) {
+      onPlacePicked(location);
+      Navigator.of(context).pop();
+      return;
+    }
+
+    context.read<TripProvider>().setDestination(location);
     Navigator.of(context).pushNamed(AppRoutes.originSelection);
   }
 
@@ -319,14 +355,13 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
     );
   }
 
-  /// Small map preview + confirm button after a place is selected.
+  /// Preview with an expanded map stretching down to the confirm button area.
   Widget _buildPlacePreview() {
     final place = _selectedPlace!;
     return Column(
       children: [
-        // Mini interactive map.
-        SizedBox(
-          height: 200,
+        // Full-height map — fills the space above the bottom section.
+        Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: GoogleMap(
@@ -384,7 +419,7 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
             ],
           ),
         ),
-        const Spacer(),
+        const SizedBox(height: 12),
         // Confirm button.
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -401,9 +436,9 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
                 elevation: 0,
               ),
               onPressed: _confirm,
-              child: const Text(
-                'Confirm',
-                style: TextStyle(
+              child: Text(
+                widget.confirmLabel ?? 'Confirm',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
@@ -415,94 +450,111 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
     );
   }
 
-  /// Full-screen map picker overlay.
+  /// Map picker with a fixed bottom bar (map does not cover the confirm button).
   Widget _buildMapPicker() {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
     return Scaffold(
-      body: Stack(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Google Map.
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: _pickerCenter,
-              zoom: 15,
-            ),
-            onMapCreated: _onMapCreated,
-            onCameraMove: _onCameraMove,
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-          ),
+          // Map section — fills everything above the bottom bar.
+          Expanded(
+            child: Stack(
+              children: [
+                GoogleMap(
+                  initialCameraPosition: CameraPosition(
+                    target: _pickerCenter,
+                    zoom: 15,
+                  ),
+                  onMapCreated: _onMapCreated,
+                  onCameraMove: _onCameraMove,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: false,
+                ),
 
-          // Centered pin.
-          const Center(
-            child: Icon(
-              Icons.location_on_rounded,
-              color: AppColors.primary,
-              size: 50,
-            ),
-          ),
+                // Centered pin.
+                const Center(
+                  child: Icon(
+                    Icons.location_on_rounded,
+                    color: AppColors.primary,
+                    size: 50,
+                  ),
+                ),
 
-          // Top bar: back + current location.
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: _closeMapPicker,
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x1A000000),
-                            blurRadius: 10,
-                            offset: Offset(0, 2),
+                // Top bar: back + current location.
+                SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: _closeMapPicker,
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x1A000000),
+                                  blurRadius: 10,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_rounded,
-                        color: AppColors.textPrimary,
-                      ),
+                        ),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: _goToCurrentLocation,
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x1A000000),
+                                  blurRadius: 10,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.my_location_rounded,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: _goToCurrentLocation,
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x1A000000),
-                            blurRadius: 10,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.my_location_rounded,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
 
-          // Bottom: Confirm button.
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          // Fixed bottom bar with the confirm button (consistent with place preview).
+          Container(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomPadding),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x08000000),
+                  blurRadius: 8,
+                  offset: Offset(0, -2),
+                ),
+              ],
+            ),
             child: SizedBox(
+              width: double.infinity,
               height: 56,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -511,8 +563,7 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  elevation: 4,
-                  shadowColor: const Color(0x30000000),
+                  elevation: 0,
                 ),
                 onPressed: _confirmMapPicker,
                 child: const Text(

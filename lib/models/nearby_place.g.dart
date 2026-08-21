@@ -18,6 +18,14 @@ NearbyPlace _$NearbyPlaceFromJson(Map<String, dynamic> json) => NearbyPlace(
       (json['types'] as List<dynamic>?)?.map((e) => e as String).toList() ??
       const [],
   icon: json['icon'] as String?,
+  photoUrls: (json['photo_urls'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const [],
+  openNow: json['open_now'] as bool?,
+  weekdayDescriptions: (json['weekday_descriptions'] as List<dynamic>?)
+      ?.map((e) => e as String)
+      .toList(),
 );
 
 Map<String, dynamic> _$NearbyPlaceToJson(NearbyPlace instance) =>
@@ -31,4 +39,7 @@ Map<String, dynamic> _$NearbyPlaceToJson(NearbyPlace instance) =>
       'longitude': instance.longitude,
       'types': instance.types,
       'icon': instance.icon,
+      'photo_urls': instance.photoUrls,
+      'open_now': instance.openNow,
+      'weekday_descriptions': instance.weekdayDescriptions,
     };

@@ -31,6 +31,13 @@ class PopularPlacesWidget extends StatefulWidget {
 class _PopularPlacesWidgetState extends State<PopularPlacesWidget> {
   List<NearbyPlace> _places = [];
   bool _loading = false;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -89,6 +96,7 @@ class _PopularPlacesWidgetState extends State<PopularPlacesWidget> {
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to load places: $e')),
         );
@@ -124,11 +132,21 @@ class _PopularPlacesWidgetState extends State<PopularPlacesWidget> {
           ),
         ),
         SizedBox(
-          height: 140,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: _places.length,
+          height: 158,
+          child: RawScrollbar(
+            controller: _scrollController,
+            thumbVisibility: true,
+            trackVisibility: true,
+            thumbColor: Colors.black26,
+            trackColor: Colors.black.withValues(alpha: 0.06),
+            radius: const Radius.circular(4),
+            thickness: 4,
+            child: ListView.separated(
+              controller: _scrollController,
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.only(left: 4, right: 16, top: 24, bottom: 8),
+              itemCount: _places.length,
             separatorBuilder: (_, _) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               return _PlaceCard(
@@ -139,6 +157,7 @@ class _PopularPlacesWidgetState extends State<PopularPlacesWidget> {
               );
             },
           ),
+        ),
         ),
       ],
     );
@@ -182,8 +201,8 @@ class _PlaceCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 220,
-        padding: const EdgeInsets.all(14),
+        width: 190,
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -199,81 +218,85 @@ class _PlaceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                // Category emoji tile.
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Center(child: Text(emoji, style: const TextStyle(fontSize: 18))),
+            // Top accent bar with emoji.
+            Container(
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(15),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
+              ),
+              alignment: Alignment.center,
+              child: Text(emoji, style: const TextStyle(fontSize: 22)),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
                     place.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary,
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            // Rating row.
-            if (place.rating > 0)
-              Row(
-                children: [
-                  const Icon(Icons.star_rounded, size: 14, color: Color(0xFFF59E0B)),
-                  const SizedBox(width: 3),
-                  Text(
-                    place.rating.toStringAsFixed(1),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                  const SizedBox(height: 4),
+                  // Rating row.
+                  if (place.rating > 0)
+                    Row(
+                      children: [
+                        const Icon(Icons.star_rounded, size: 12,
+                            color: Color(0xFFF59E0B)),
+                        const SizedBox(width: 2),
+                        Text(
+                          place.rating.toStringAsFixed(1),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          '(${place.userRatingsTotal})',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w400,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                        if (distanceText != null) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            '· $distanceText',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 3),
-                  Text(
-                    '(${place.userRatingsTotal})',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w400,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                  if (distanceText != null) ...[
-                    const SizedBox(width: 6),
+                  const SizedBox(height: 4),
+                  // Vicinity.
+                  if (place.vicinity != null)
                     Text(
-                      '· $distanceText',
+                      place.vicinity!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 11,
                         color: AppColors.textMuted,
                       ),
                     ),
-                  ],
                 ],
               ),
-            const Spacer(),
-            // Vicinity.
-            if (place.vicinity != null)
-              Text(
-                place.vicinity!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textMuted,
-                ),
-              ),
+            ),
           ],
         ),
       ),

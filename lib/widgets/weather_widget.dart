@@ -6,6 +6,7 @@ import '../providers/providers.dart';
 import '../services/services.dart';
 import '../navigation/app_routes.dart';
 import '../utils/constants.dart';
+import '../utils/weather_utils.dart';
 
 /// Displays the current weather forecast for the user's location.
 ///
@@ -56,9 +57,9 @@ class _WeatherWidgetState extends State<WeatherWidget> {
         setState(() {
           _loading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load weather: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to load weather: $e')));
       }
     }
   }
@@ -101,6 +102,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     }
 
     final weather = _weather!;
+    final translatedSummary = translateWeather(weather.summaryForecast);
     final emoji = _weatherEmoji(weather.summaryForecast);
 
     return Container(
@@ -133,9 +135,8 @@ class _WeatherWidgetState extends State<WeatherWidget> {
                 ),
               ),
               TextButton(
-                onPressed: () => Navigator.of(context).pushNamed(
-                  AppRoutes.weatherHistory,
-                ),
+                onPressed: () =>
+                    Navigator.of(context).pushNamed(AppRoutes.weatherHistory),
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   minimumSize: Size.zero,
@@ -180,7 +181,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      weather.summaryForecast,
+                      translatedSummary,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(

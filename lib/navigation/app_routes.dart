@@ -41,6 +41,16 @@ abstract class AppRoutes {
   /// User profile route.
   static const String profile = '/profile';
 
+  /// Nearby services route.
+  static const String nearbyServices = '/nearby-services';
+
+  /// Saved route detail/comparison route. Requires a [SavedRoute] passed
+  /// as the route's `arguments`.
+  static const String savedRouteComparison = '/saved-route-comparison';
+
+  /// Insights & analytics dashboard route.
+  static const String insightsDashboard = '/insights-dashboard';
+
   /// Generates a route for the given [RouteSettings].
   ///
   /// Routes that do not yet have a dedicated screen return a placeholder
@@ -84,7 +94,15 @@ abstract class AppRoutes {
       case alertsEmergency:
         return const _PlaceholderPage(title: 'Alerts & Emergency');
       case profile:
-        return const _PlaceholderPage(title: 'Profile');
+        return const ProfilePage();
+      case nearbyServices:
+        return const NearbyServicesPage();
+      case savedRouteComparison:
+        return arguments is SavedRoute
+            ? SavedRouteComparisonPage(route: arguments)
+            : const _PlaceholderPage(title: 'Saved Route');
+      case insightsDashboard:
+        return const InsightsDashboardPage();
       default:
         return const _PlaceholderPage(title: 'Page Not Found');
     }

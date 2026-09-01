@@ -7,6 +7,7 @@ class TopBar extends StatelessWidget {
   /// Creates a [TopBar].
   const TopBar({
     this.onFavoritesTap,
+    this.onNearbyServicesTap,
     this.onNotificationTap,
     this.onAlertTap,
     this.onProfileTap,
@@ -15,6 +16,9 @@ class TopBar extends StatelessWidget {
 
   /// Called when the favorites icon is tapped.
   final VoidCallback? onFavoritesTap;
+
+  /// Called when the nearby services icon is tapped.
+  final VoidCallback? onNearbyServicesTap;
 
   /// Called when the notification icon is tapped.
   final VoidCallback? onNotificationTap;
@@ -58,6 +62,11 @@ class TopBar extends StatelessWidget {
         _IconButton(
           icon: Icons.bookmark_outline_rounded,
           onTap: onFavoritesTap,
+        ),
+        const SizedBox(width: 8),
+        _IconButton(
+          icon: Icons.explore_outlined,
+          onTap: onNearbyServicesTap,
         ),
         const SizedBox(width: 8),
         _IconButton(

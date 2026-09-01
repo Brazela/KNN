@@ -201,6 +201,9 @@ class _TopBar extends StatelessWidget {
       onFavoritesTap: () {
         Navigator.of(context).pushNamed(AppRoutes.favorites);
       },
+      onNearbyServicesTap: () {
+        Navigator.of(context).pushNamed(AppRoutes.nearbyServices);
+      },
       onNotificationTap: () {
         Navigator.of(context).pushNamed(AppRoutes.notifications);
       },

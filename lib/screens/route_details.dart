@@ -50,6 +50,10 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
   Timer? _realtimeTimer;
   List<String> _vehicleEtaMessages = [];
 
+  /// Whether the first realtime poll has completed. Prevents flashing
+  /// "No realtime data" before the first fetch returns.
+  bool _realtimeChecked = false;
+
   /// Tracks previous vehicle samples (per vehicle) to estimate speed.
   final Map<String, ({LatLng pos, int ts})> _vehicleSamples = {};
 
@@ -464,11 +468,19 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
       }
 
       setState(() {
+        _realtimeChecked = true;
         _realtimeVehicles = filtered;
         _vehicleEtaMessages = etaMessages;
       });
     } catch (_) {
-      // Silently ignore.
+      // Silently ignore — mark realtime as checked so the UI can show
+      // "No realtime data" instead of hiding the section.
+      if (mounted) {
+        setState(() {
+          _realtimeChecked = true;
+          _vehicleEtaMessages = [];
+        });
+      }
     }
   }
 
@@ -880,7 +892,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
               const Divider(height: 24, indent: 20, endIndent: 20),
 
               // Vehicle ETA messages — shown for transit mode with live vehicles.
-              if (_mode == TravelMode.transit && _vehicleEtaMessages.isNotEmpty)
+              if (_mode == TravelMode.transit && _realtimeChecked) ...[
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
@@ -902,33 +914,54 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
                         ],
                       ),
                       const SizedBox(height: 6),
-                      ...List.generate(_vehicleEtaMessages.length, (i) {
-                        return Padding(
-                          padding: EdgeInsets.only(bottom: i < _vehicleEtaMessages.length - 1 ? 4 : 0),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('• ', style: TextStyle(
-                                fontSize: 12, color: AppColors.success,
-                              )),
-                              Expanded(
-                                child: Text(
-                                  _vehicleEtaMessages[i],
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondary,
-                                    height: 1.4,
+                      if (_vehicleEtaMessages.isNotEmpty)
+                        ...List.generate(_vehicleEtaMessages.length, (i) {
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: i < _vehicleEtaMessages.length - 1 ? 4 : 0),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('• ', style: TextStyle(
+                                  fontSize: 12, color: AppColors.success,
+                                )),
+                                Expanded(
+                                  child: Text(
+                                    _vehicleEtaMessages[i],
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textSecondary,
+                                      height: 1.4,
+                                    ),
                                   ),
                                 ),
+                              ],
+                            ),
+                          );
+                        })
+                      else
+                        const Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('• ', style: TextStyle(
+                              fontSize: 12, color: AppColors.textMuted,
+                            )),
+                            Expanded(
+                              child: Text(
+                                'No realtime data available for this service',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textMuted,
+                                  height: 1.4,
+                                ),
                               ),
-                            ],
-                          ),
-                        );
-                      }),
+                            ),
+                          ],
+                        ),
                       const SizedBox(height: 10),
                     ],
                   ),
                 ),
+              ],
 
               // Steps list — uses string steps as primary (always reliable),
               // enhanced with icons/durations from stepInfos when available.

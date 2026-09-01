@@ -202,10 +202,28 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
       final results = await Future.wait(futures);
       final allVehicles = results.expand((v) => v).toList();
 
+      // Only consider vehicles that will arrive at the departure station
+      // (i.e., haven't already passed it). Skip the filter when the route
+      // has no usable station coordinates (e.g. Directions-based routes
+      // use synthetic stops with 0,0).
+      final departureStop = _transitRoute?.stops.isNotEmpty == true
+          ? _transitRoute!.stops.first
+          : null;
+      final hasStationCoords = departureStop != null &&
+          (departureStop.stopLat != 0 || departureStop.stopLon != 0);
+      final stationLatLng = hasStationCoords
+          ? LatLng(departureStop.stopLat, departureStop.stopLon)
+          : null;
+      final candidates = stationLatLng != null
+          ? allVehicles
+              .where((v) => _isApproachingStation(v, stationLatLng))
+              .toList()
+          : allVehicles;
+
       // Find a vehicle matching the trip ID.
       GTFSVehicle? matched;
       if (_transitRoute != null) {
-        matched = allVehicles.firstWhere(
+        matched = candidates.firstWhere(
           (v) => v.tripId == _transitRoute!.id,
           orElse: () => const GTFSVehicle(vehicleId: ''),
         );
@@ -213,7 +231,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
       }
 
       // Fallback: nearest vehicle to origin if no trip match.
-      matched ??= _findNearestVehicle(allVehicles, _origin!);
+      matched ??= _findNearestVehicle(candidates, _origin!);
 
       if (matched != null && mounted) {
         setState(() {
@@ -223,13 +241,30 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
         await _updateVehicleMarker(matched);
         _calculateTransitProgress(matched);
       } else if (mounted) {
-        setState(() => _statusMessage = 'No realtime vehicle data available');
+        setState(() => _statusMessage = 'No realtime data available');
       }
     } catch (e) {
       if (mounted) {
         setState(() => _statusMessage = 'Realtime update failed: $e');
       }
     }
+  }
+
+  /// Returns true when the vehicle is heading toward the station (not passed).
+  bool _isApproachingStation(GTFSVehicle v, LatLng station) {
+    final bearing = v.bearing;
+    if (bearing == null || v.latitude == null || v.longitude == null) {
+      return true; // no bearing data → assume approaching
+    }
+    final toStation = bearingBetween(
+      v.latitude!,
+      v.longitude!,
+      station.latitude,
+      station.longitude,
+    );
+    var diff = (bearing - toStation).abs() % 360;
+    if (diff > 180) diff = 360 - diff;
+    return diff <= 90; // heading within 90° of the station
   }
 
   /// Finds the nearest vehicle to a given location.

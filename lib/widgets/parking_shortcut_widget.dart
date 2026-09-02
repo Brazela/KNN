@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../navigation/navigation.dart';
-import '../providers/providers.dart';
 import '../utils/constants.dart';
 
 /// A compact promotional card displayed on the homepage that navigates

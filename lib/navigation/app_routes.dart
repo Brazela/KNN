@@ -101,8 +101,6 @@ abstract class AppRoutes {
         return const NotificationsPage();
       case settings:
         return const SettingsPage();
-      case alertsEmergency:
-        return const _PlaceholderPage(title: 'Alerts & Emergency');
       case profile:
         return const ProfilePage();
       case nearbyServices:

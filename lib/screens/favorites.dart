@@ -22,7 +22,7 @@ class FavoritesPage extends StatefulWidget {
 
 class _FavoritesPageState extends State<FavoritesPage> {
   List<FavoriteLocation> _favorites = _dummyFavorites();
-  List<SavedRoute> _savedRoutes = _dummySavedRoutes();
+  final List<SavedRoute> _savedRoutes = _dummySavedRoutes();
 
   // --- Dummy data ---------------------------------------------------------
 

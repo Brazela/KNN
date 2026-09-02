@@ -23,7 +23,7 @@ class Homepage extends StatefulWidget {
 }
 
 class _HomepageState extends State<Homepage> {
-  int _bottomNavIndex = 0;
+  final int _bottomNavIndex = 0;
   bool _locationChecked = false;
   final GlobalKey<RefreshIndicatorState> _refreshKey =
       GlobalKey<RefreshIndicatorState>();

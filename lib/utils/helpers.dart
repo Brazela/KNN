@@ -1,9 +1,30 @@
-import 'dart:math' show cos, sqrt, asin, pi, sin;
+import 'dart:math' show cos, sqrt, asin, pi, sin, atan2;
 
 import 'package:intl/intl.dart';
 
+import '../models/models.dart';
+
 /// Earth radius in kilometres used by the Haversine formula.
 const double _earthRadiusKm = 6371.0;
+
+/// Returns true when [a] and [b] refer to the same place, either by
+/// matching Google place IDs or by matching coordinates (rounded to
+/// ~5 decimal places, roughly 1 m).
+bool isSameLocation(Location a, Location b) {
+  if (a.placeId != null &&
+      b.placeId != null &&
+      a.placeId!.isNotEmpty &&
+      a.placeId == b.placeId) {
+    return true;
+  }
+
+  const precision = 5;
+  final latA = double.parse(a.latitude.toStringAsFixed(precision));
+  final lngA = double.parse(a.longitude.toStringAsFixed(precision));
+  final latB = double.parse(b.latitude.toStringAsFixed(precision));
+  final lngB = double.parse(b.longitude.toStringAsFixed(precision));
+  return latA == latB && lngA == lngB;
+}
 
 /// Calculates the great-circle distance between two coordinates using the
 /// Haversine formula.
@@ -86,4 +107,14 @@ Duration parseGTFSTime(String time) {
   final seconds = int.tryParse(parts[2]) ?? 0;
 
   return Duration(hours: hours, minutes: minutes, seconds: seconds);
+}
+
+/// Calculates the initial bearing (degrees, 0–360) from point A to point B.
+double bearingBetween(double lat1, double lng1, double lat2, double lng2) {
+  final dLng = _degreesToRadians(lng2 - lng1);
+  final y = sin(dLng) * cos(_degreesToRadians(lat2));
+  final x = cos(_degreesToRadians(lat1)) * sin(_degreesToRadians(lat2)) -
+      sin(_degreesToRadians(lat1)) * cos(_degreesToRadians(lat2)) * cos(dLng);
+  final bearing = atan2(y, x) * 180 / pi;
+  return (bearing + 360) % 360;
 }

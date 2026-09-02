@@ -5,8 +5,10 @@ import '../models/models.dart';
 import '../navigation/navigation.dart';
 import '../providers/providers.dart';
 import '../services/services.dart';
+import '../utils/address_utils.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../utils/weather_utils.dart';
 import '../widgets/widgets.dart';
 
 /// Compares transit and driving options between the selected origin
@@ -35,6 +37,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
   String _recommendationReason = '';
 
   TravelMode? _selectedMode;
+  Comparison? _comparison;
 
   /// Transit step details (line name, stops, vehicle type) for the best route.
   List<DirectionsStepInfo>? _transitStepInfos;
@@ -112,6 +115,26 @@ class _ComparisonPageState extends State<ComparisonPage> {
           _loading = false;
         });
       }
+
+      // Build comparison object for persistence.
+      final bestTransit = transitRoutes.isNotEmpty ? transitRoutes.first : TransitRoute(
+        id: 'none',
+        name: 'No transit',
+        type: TransitMode.unknown,
+        stops: [],
+        durationMinutes: 0,
+        transfers: 0,
+        fare: 0,
+      );
+      _comparison = Comparison(
+        origin: origin,
+        destination: destination,
+        transitOption: bestTransit,
+        drivingOption: drivingRoute,
+        recommendation: recommendation.$1,
+        recommendationReason: recommendation.$2,
+        weather: originForecasts.isNotEmpty ? originForecasts.first : null,
+      );
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -343,15 +366,6 @@ class _ComparisonPageState extends State<ComparisonPage> {
     required Weather? originWeather,
     required Weather? destinationWeather,
   }) {
-    // Weather override: rain forecasted → recommend transit.
-    final hasRain = _hasRainForecast(originWeather, destinationWeather);
-    if (hasRain) {
-      return (
-        Recommendation.transit,
-        'Avoid traffic jams — rain is forecasted along your route',
-      );
-    }
-
     // No transit routes available.
     if (transitRoutes.isEmpty) {
       return (
@@ -363,34 +377,86 @@ class _ComparisonPageState extends State<ComparisonPage> {
     final bestTransit = transitRoutes.first;
     final drivingMinutes = drivingRoute.durationSeconds ~/ 60;
     final drivingTotalCost = drivingRoute.fuelCost + drivingRoute.tolls;
+    final savingRM = (drivingTotalCost - bestTransit.fare).abs();
+    final timeDeltaMin = (bestTransit.durationMinutes - drivingMinutes).abs();
+    final savingText = formatCurrency(savingRM);
 
-    // Recommend transit if cheaper AND within 15 min of driving time.
-    if (bestTransit.fare < drivingTotalCost &&
-        bestTransit.durationMinutes <= drivingMinutes + 15) {
+    final hasRain = _hasRainForecast(originWeather, destinationWeather);
+
+    // Score each option (lower = better): cost weight + time weight.
+    final transitScore = bestTransit.fare * 2 + bestTransit.durationMinutes;
+    final drivingScore = drivingTotalCost * 2 + drivingMinutes;
+    final transitWins = transitScore <= drivingScore;
+
+    if (hasRain) {
+      // Rain → transit always preferred (avoids driving in rain).
+      if (transitWins) {
+        return (
+          Recommendation.transit,
+          "It's raining — transit avoids traffic delays · saves $savingText vs driving",
+        );
+      }
       return (
         Recommendation.transit,
-        'Transit is cheaper and only slightly slower than driving',
+        "It's raining — transit avoids traffic delays",
       );
     }
 
-    // Recommend driving otherwise.
+    if (transitWins) {
+      if (timeDeltaMin == 0) {
+        return (
+          Recommendation.transit,
+          'Saves $savingText vs driving · same time',
+        );
+      }
+      if (bestTransit.durationMinutes <= drivingMinutes) {
+        return (
+          Recommendation.transit,
+          'Saves $savingText vs driving · $timeDeltaMin min faster',
+        );
+      }
+      return (
+        Recommendation.transit,
+        'Saves $savingText vs driving · only $timeDeltaMin min slower',
+      );
+    }
+
+    // Driving wins on combined cost + time.
+    if (drivingTotalCost < bestTransit.fare) {
+      if (timeDeltaMin == 0) {
+        return (
+          Recommendation.driving,
+          'Saves $savingText vs transit · same time',
+        );
+      }
+      if (drivingMinutes < bestTransit.durationMinutes) {
+        return (
+          Recommendation.driving,
+          'Saves $timeDeltaMin min and $savingText vs transit',
+        );
+      }
+      return (
+        Recommendation.driving,
+        'Saves $savingText vs transit',
+      );
+    }
+    if (drivingMinutes < bestTransit.durationMinutes) {
+      return (
+        Recommendation.driving,
+        'Saves $timeDeltaMin min vs transit',
+      );
+    }
     return (
       Recommendation.driving,
-      'Driving is faster or more convenient for this route',
+      'Driving is more convenient for this route',
     );
   }
 
-  /// Checks if any weather forecast contains rain keywords.
+  /// Checks if origin or destination is raining now.
   bool _hasRainForecast(Weather? origin, Weather? destination) {
     for (final w in [origin, destination]) {
       if (w == null) continue;
-      final summary = w.summaryForecast.toLowerCase();
-      if (summary.contains('hujan') ||
-          summary.contains('ribut') ||
-          summary.contains('petir') ||
-          summary.contains('mendung')) {
-        return true;
-      }
+      if (isRaining(w.summaryForecast)) return true;
     }
     return false;
   }
@@ -415,15 +481,27 @@ class _ComparisonPageState extends State<ComparisonPage> {
     final origin = tripProvider.origin!;
     final destination = tripProvider.destination!;
 
+    // If the user picked a specific from-location (not their current
+    // position), route from the current location first, then to the
+    // from-location, then continue to the destination. The from-location
+    // is marked as the journey's start point.
+    final currentLoc = tripProvider.currentLocation;
+    final via = (currentLoc != null && !isSameLocation(currentLoc, origin))
+        ? origin
+        : null;
+    final routeOrigin = via != null ? currentLoc : origin;
+
     if (_selectedMode == TravelMode.transit && _transitRoutes.isNotEmpty) {
       Navigator.of(context).pushNamed(
         AppRoutes.routeDetails,
         arguments: {
           'mode': TravelMode.transit,
           'transitRoute': _transitRoutes.first,
-          'origin': origin,
+          'origin': routeOrigin,
+          'via': via,
           'destination': destination,
           'weather': _originWeather,
+          'comparison': _comparison,
         },
       );
     } else if (_selectedMode == TravelMode.driving && _drivingRoute != null) {
@@ -432,9 +510,11 @@ class _ComparisonPageState extends State<ComparisonPage> {
         arguments: {
           'mode': TravelMode.driving,
           'drivingRoute': _drivingRoute,
-          'origin': origin,
+          'origin': routeOrigin,
+          'via': via,
           'destination': destination,
           'weather': _originWeather,
+          'comparison': _comparison,
         },
       );
     }
@@ -510,7 +590,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${_shortAddress(origin)} → ${_shortAddress(destination)}',
+                  '${shortAddress(origin)} → ${shortAddress(destination)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -603,6 +683,8 @@ class _ComparisonPageState extends State<ComparisonPage> {
                   'From: ${bestTransit.stops.first.stopName}',
                 if (bestTransit.stops.length > 1)
                   'To: ${bestTransit.stops.last.stopName}',
+                if (_recommendation == Recommendation.transit)
+                  '✓ Recommended: $_recommendationReason',
               ],
               accentColor: AppColors.success,
               isRecommended: _recommendation == Recommendation.transit,
@@ -631,6 +713,8 @@ class _ComparisonPageState extends State<ComparisonPage> {
                 'Fuel cost: ${formatCurrency(driving.fuelCost)}',
                 'Tolls: ${formatCurrency(driving.tolls)}',
                 'Based on current RON95 price',
+                if (_recommendation == Recommendation.driving)
+                  '✓ Recommended: $_recommendationReason',
               ],
               accentColor: AppColors.primary,
               isRecommended: _recommendation == Recommendation.driving,
@@ -640,11 +724,6 @@ class _ComparisonPageState extends State<ComparisonPage> {
             const SizedBox(height: 16),
           ],
 
-          // Recommendation badge.
-          RecommendationBadge(
-            recommendedMode: _recommendation,
-            reason: _recommendationReason,
-          ),
           const SizedBox(height: 80),
         ],
       ),
@@ -852,17 +931,6 @@ class _ComparisonPageState extends State<ComparisonPage> {
         ),
       ),
     );
-  }
-
-  String _shortAddress(Location? location) {
-    if (location == null) return 'Unknown';
-    final address = location.address ?? '';
-    if (address.isEmpty) {
-      return '${location.latitude.toStringAsFixed(3)}, ${location.longitude.toStringAsFixed(3)}';
-    }
-    // Take first part before comma for brevity.
-    final parts = address.split(',');
-    return parts.first.trim();
   }
 
   String _transitModeLabel(TransitMode mode) {

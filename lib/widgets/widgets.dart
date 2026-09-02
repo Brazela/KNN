@@ -1,12 +1,14 @@
 export 'comparison_card.dart';
+export 'trip_card.dart';
 export 'cost_comparison_card.dart';
 export 'fuel_price_widget.dart';
 export 'location_permission.dart';
 export 'parking_shortcut_widget.dart';
 export 'popular_places_widget.dart';
-export 'recent_trip_chip.dart';
 export 'recommendation_badge.dart';
+export 'recommendation_card.dart';
 export 'route_step_card.dart';
+export 'route_step_list.dart';
 export 'search_input.dart';
 export 'shortcut_chip.dart';
 export 'status_card.dart';

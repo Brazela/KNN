@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../providers/providers.dart';
 import '../services/services.dart';
+import '../navigation/app_routes.dart';
 import '../utils/constants.dart';
+import '../utils/weather_utils.dart';
 
 /// Displays the current weather forecast for the user's location.
 ///
@@ -55,9 +57,9 @@ class _WeatherWidgetState extends State<WeatherWidget> {
         setState(() {
           _loading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load weather: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to load weather: $e')));
       }
     }
   }
@@ -72,56 +74,6 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     if (lower.contains('cerah') || lower.contains('terang')) return '☀️';
     if (lower.contains('panas')) return '☀️';
     return '🌤️';
-  }
-
-  /// Translates a Malay weather summary to English.
-  String _translateWeather(String text) {
-    final lower = text.toLowerCase().trim();
-
-    // Whole-phrase matches first.
-    if (lower == 'tiada hujan') return 'No rain';
-    if (lower == 'hujan ringan') return 'Light rain';
-    if (lower == 'hujan sederhana') return 'Moderate rain';
-    if (lower == 'hujan lebat') return 'Heavy rain';
-    if (lower == 'hujan berpetir') return 'Thunderstorms';
-    if (lower == 'hujan ribut') return 'Rain with storm';
-    if (lower == 'ribut petir') return 'Thunderstorm';
-    if (lower == 'kabus') return 'Foggy';
-    if (lower == 'panas') return 'Hot';
-    if (lower == 'cerah') return 'Clear';
-    if (lower == 'cerah terang') return 'Bright & clear';
-    if (lower == 'mendung') return 'Cloudy';
-    if (lower == 'berawan') return 'Cloudy';
-    if (lower == 'berangin') return 'Windy';
-
-    // Fallback: replace individual keywords so partial matches still work.
-    var result = text;
-    const replacements = {
-      'Tiada hujan': 'No rain',
-      'Hujan lebat': 'Heavy rain',
-      'Hujan sederhana': 'Moderate rain',
-      'Hujan ringan': 'Light rain',
-      'Hujan berpetir': 'Thunderstorms',
-      'Hujan': 'Rain',
-      'Ribut petir': 'Thunderstorm',
-      'Ribut': 'Storm',
-      'Petir': 'Thunder',
-      'Mendung': 'Cloudy',
-      'Berawan': 'Cloudy',
-      'Cerah terang': 'Bright & clear',
-      'Cerah': 'Clear',
-      'Panas': 'Hot',
-      'Kabus': 'Foggy',
-      'Berangin': 'Windy',
-      'Pagi': 'Morning',
-      'Petang': 'Evening',
-      'Malam': 'Night',
-      'Tengahari': 'Afternoon',
-    };
-    for (final entry in replacements.entries) {
-      result = result.replaceAll(entry.key, entry.value);
-    }
-    return result;
   }
 
   @override
@@ -150,7 +102,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     }
 
     final weather = _weather!;
-    final translatedSummary = _translateWeather(weather.summaryForecast);
+    final translatedSummary = translateWeather(weather.summaryForecast);
     final emoji = _weatherEmoji(weather.summaryForecast);
 
     return Container(
@@ -167,73 +119,110 @@ class _WeatherWidgetState extends State<WeatherWidget> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Emoji + location.
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Weather',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () =>
+                    Navigator.of(context).pushNamed(AppRoutes.weatherHistory),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text(
+                  'Details →',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              // Emoji + location.
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(emoji, style: const TextStyle(fontSize: 24)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        weather.locationName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
+                    Row(
+                      children: [
+                        Text(emoji, style: const TextStyle(fontSize: 24)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            weather.locationName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      translatedSummary,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  translatedSummary,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.textSecondary,
+              ),
+              // Min / max temps.
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${weather.minTemp}°',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.textMuted,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          // Min / max temps.
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${weather.minTemp}°',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: AppColors.textMuted,
-                ),
-              ),
-              Container(
-                width: 30,
-                height: 3,
-                margin: const EdgeInsets.symmetric(vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Text(
-                '${weather.maxTemp}°',
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                ),
+                  Container(
+                    width: 30,
+                    height: 3,
+                    margin: const EdgeInsets.symmetric(vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Text(
+                    '${weather.maxTemp}°',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

@@ -348,9 +348,104 @@ class GoogleMapsService {
     Location origin,
     Location destination, {
     String mode = 'driving',
+    List<Location> waypoints = const [],
   }) async {
-    final result = await _fetchDirectionsRaw(origin, destination, mode: mode);
+    final result = await _fetchDirectionsRaw(
+      origin,
+      destination,
+      mode: mode,
+      waypoints: waypoints,
+    );
     return result;
+  }
+
+  /// Fetches a combined route: a driving "get to your start" leg from
+  /// [currentLocation] to [fromLocation], followed by the main [mode] route
+  /// from [fromLocation] to [destination].
+  ///
+  /// Used when the user's chosen from-location differs from their real
+  /// current position and the main mode is transit — the Directions API
+  /// does not support waypoints in transit mode, so the two legs are
+  /// fetched separately and merged into a single [DirectionsResult].
+  Future<DirectionsResult> getDirectionsWithPrelude(
+    Location currentLocation,
+    Location fromLocation,
+    Location destination, {
+    required String mode,
+  }) async {
+    final prelude = await getDirections(
+      currentLocation,
+      fromLocation,
+      mode: 'driving',
+    );
+    final main = await getDirections(
+      fromLocation,
+      destination,
+      mode: mode,
+    );
+    return DirectionsResult(
+      polylinePoints: [...prelude.polylinePoints, ...main.polylinePoints],
+      steps: [...prelude.steps, ...main.steps],
+      stepInfos: [...prelude.stepInfos, ...main.stepInfos],
+      distanceMeters: prelude.distanceMeters + main.distanceMeters,
+      durationSeconds: prelude.durationSeconds + main.durationSeconds,
+    );
+  }
+
+  /// Fetches a transit route that always starts by driving from the user's
+  /// current location to the nearest station (the departure stop of the
+  /// transit plan), then continues by transit to the destination.
+  ///
+  /// The transit plan is computed from [fromLocation] → [destination] to
+  /// determine the departure station; the redundant walk-to-station steps
+  /// before the first transit step are dropped since the user drives there.
+  Future<({DirectionsResult result, int preludePointCount, String stationName})>
+      getTransitWithStationPrelude(
+    Location currentLocation,
+    Location fromLocation,
+    Location destination,
+  ) async {
+    final transit = await getDirections(
+      fromLocation,
+      destination,
+      mode: 'transit',
+    );
+
+    final firstTransitIndex =
+        transit.stepInfos.indexWhere((s) => s.travelMode == 'TRANSIT');
+    if (firstTransitIndex < 0) {
+      return (result: transit, preludePointCount: 0, stationName: '');
+    }
+
+    final firstTransit = transit.stepInfos[firstTransitIndex];
+    final station = firstTransit.startLatLng;
+    final stationName = firstTransit.transitInfo?.departureStop ?? '';
+    if (station == null) {
+      return (result: transit, preludePointCount: 0, stationName: stationName);
+    }
+
+    // Driving prelude from the current location to the departure station.
+    final prelude = await getDirections(
+      currentLocation,
+      Location(latitude: station.latitude, longitude: station.longitude),
+      mode: 'driving',
+    );
+
+    // Drop the walk-to-station steps; transit continues from the station.
+    final transitSteps = transit.steps.sublist(firstTransitIndex);
+    final transitStepInfos = transit.stepInfos.sublist(firstTransitIndex);
+
+    return (
+      result: DirectionsResult(
+        polylinePoints: [...prelude.polylinePoints, ...transit.polylinePoints],
+        steps: [...prelude.steps, ...transitSteps],
+        stepInfos: [...prelude.stepInfos, ...transitStepInfos],
+        distanceMeters: prelude.distanceMeters + transit.distanceMeters,
+        durationSeconds: prelude.durationSeconds + transit.durationSeconds,
+      ),
+      preludePointCount: prelude.polylinePoints.length,
+      stationName: stationName,
+    );
   }
 
   /// Fetches multiple transit route alternatives between two points.
@@ -380,6 +475,7 @@ class GoogleMapsService {
     Location destination, {
     required String mode,
     bool alternatives = false,
+    List<Location> waypoints = const [],
   }) async {
     final params = <String, String>{
       'origin': '${origin.latitude},${origin.longitude}',
@@ -389,6 +485,11 @@ class GoogleMapsService {
     };
     if (alternatives) {
       params['alternatives'] = 'true';
+    }
+    if (waypoints.isNotEmpty) {
+      params['waypoints'] = waypoints
+          .map((w) => '${w.latitude},${w.longitude}')
+          .join('|');
     }
 
     final uri = _buildUri(
@@ -439,18 +540,22 @@ class GoogleMapsService {
     final polylinePoints = overviewPolyline?['points'] as String? ?? '';
 
     final legs = route['legs'] as List<dynamic>? ?? [];
-    final leg = legs.isNotEmpty ? legs.first as Map<String, dynamic> : null;
 
     final stepInfos = <DirectionsStepInfo>[];
     final steps = <String>[];
     var distanceMeters = 0;
     var durationSeconds = 0;
 
-    if (leg != null) {
+    // A route may contain multiple legs when waypoints are used (e.g.
+    // current location → from-location → destination). Aggregate steps,
+    // distance, and duration across every leg so the result reflects the
+    // whole journey.
+    for (final legJson in legs) {
+      final leg = legJson as Map<String, dynamic>;
       final distance = leg['distance'] as Map<String, dynamic>?;
       final duration = leg['duration'] as Map<String, dynamic>?;
-      distanceMeters = distance?['value'] as int? ?? 0;
-      durationSeconds = duration?['value'] as int? ?? 0;
+      distanceMeters += distance?['value'] as int? ?? 0;
+      durationSeconds += duration?['value'] as int? ?? 0;
 
       final stepList = leg['steps'] as List<dynamic>? ?? [];
       for (final s in stepList) {

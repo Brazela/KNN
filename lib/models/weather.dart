@@ -177,3 +177,37 @@ class EarthquakeWarning {
   /// Converts this [EarthquakeWarning] to a JSON map.
   Map<String, dynamic> toJson() => _$EarthquakeWarningToJson(this);
 }
+
+@JsonSerializable(fieldRename: FieldRename.snake)
+class MonthlyAverage {
+  const MonthlyAverage({
+    required this.avgTemp,
+    required this.rainDays,
+    required this.avgHumidity,
+    required this.year,
+    required this.month,
+    required this.hottestTemp,
+    required this.hottestDate,
+    required this.coldestTemp,
+    required this.coldestDate,
+  });
+
+  factory MonthlyAverage.fromJson(Map<String, dynamic> json) =>
+      _$MonthlyAverageFromJson(json);
+
+  final double avgTemp;
+  final int rainDays;
+  final double avgHumidity;
+  final int year;
+  final int month;
+  final double hottestTemp;
+  final String hottestDate;
+  final double coldestTemp;
+  final String coldestDate;
+
+  Map<String, dynamic> toJson() => _$MonthlyAverageToJson(this);
+
+  @override
+  String toString() =>
+      'MonthlyAverage($year-$month, avgTemp: $avgTemp, rainDays: $rainDays)';
+}

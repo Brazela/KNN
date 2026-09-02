@@ -30,8 +30,16 @@ abstract class ApiUrls {
   ///
   /// Sorts by date descending and filters for price levels (not weekly
   /// changes) so the first result is always the most recent price.
-  static const String fuelPriceUrl =
-      'https://api.data.gov.my/data-catalogue?id=fuelprice&sort=-date&limit=1&series_type=level';
+  static const String fuelPriceBaseUrl =
+      'https://api.data.gov.my/data-catalogue?id=fuelprice&sort=-date&series_type=level';
+
+  static String fuelPriceUrl({int limit = 1}) =>
+      '$fuelPriceBaseUrl&limit=$limit';
+
+  static String get fuelPriceLatestUrl => fuelPriceUrl();
+
+  static String fuelPriceHistoryUrl({int limit = 50}) =>
+      fuelPriceUrl(limit: limit);
 
   /// Google Maps Places Autocomplete endpoint (classic).
   static const String googlePlacesAutocompleteUrl =
@@ -56,6 +64,10 @@ abstract class ApiUrls {
   /// Google Places API (New) — Nearby Search.
   static const String googlePlacesNewNearbyUrl =
       'https://places.googleapis.com/v1/places:searchNearby';
+
+  /// Open-Meteo historical weather archive API.
+  static const String historicalWeatherBaseUrl =
+      'https://archive-api.open-meteo.com/v1/archive';
 }
 
 /// Google Maps API configuration.
@@ -73,6 +85,9 @@ abstract class AppColors {
 
   /// Success / transit accent green.
   static const Color success = Color(0xFF059669);
+
+  /// Bright yellow used for the "get to your start" prelude leg.
+  static const Color prelude = Color(0xFFFACC15);
 
   /// Dark slate used for status cards.
   static const Color darkSlate = Color(0xFF1E293B);

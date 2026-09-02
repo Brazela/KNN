@@ -24,14 +24,33 @@ class SearchDestinationPage extends StatefulWidget {
   ///
   /// If [openMapPicker] is true, the page opens directly into the full-
   /// screen map-picker mode for pinning a location on the map.
-  const SearchDestinationPage({this.initialPlace, this.openMapPicker = false, super.key});
+  const SearchDestinationPage({
+    this.initialPlace,
+    this.initialLocation,
+    this.openMapPicker = false,
+    this.onPlacePicked,
+    this.confirmLabel,
+    super.key,
+  });
 
   /// An optional nearby place to pre-fill, bypassing the search step.
   final NearbyPlace? initialPlace;
 
+  /// An optional saved [Location] (e.g. Home/Work) to pre-fill, bypassing
+  /// the search step.
+  final Location? initialLocation;
+
   /// If true, the full-screen map picker is shown immediately on open
   /// instead of the search interface.
   final bool openMapPicker;
+
+  /// When provided, the page runs in "save a place" mode: confirming a
+  /// selection calls this callback with the picked [Location] and pops
+  /// back instead of continuing the trip flow.
+  final Future<void> Function(Location location)? onPlacePicked;
+
+  /// Overrides the confirm button label (e.g. "Save as Home").
+  final String? confirmLabel;
 
   @override
   State<SearchDestinationPage> createState() => _SearchDestinationPageState();
@@ -65,6 +84,17 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
       );
       _pickerCenter = LatLng(p.latitude, p.longitude);
       _searchController.text = p.name;
+    } else if (widget.initialLocation != null) {
+      final loc = widget.initialLocation!;
+      _selectedPlace = PlaceDetail(
+        placeId: loc.placeId ?? '',
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        formattedAddress: loc.address ?? 'Saved location',
+        name: loc.address,
+      );
+      _pickerCenter = LatLng(loc.latitude, loc.longitude);
+      _searchController.text = loc.address ?? 'Saved location';
     }
 
     // Auto-focus the search field after the first frame so the keyboard
@@ -161,15 +191,21 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
   void _confirm() {
     if (_selectedPlace == null) return;
 
-    context.read<TripProvider>().setDestination(
-          Location(
-            latitude: _selectedPlace!.latitude,
-            longitude: _selectedPlace!.longitude,
-            address: _selectedPlace!.formattedAddress,
-            placeId: _selectedPlace!.placeId,
-          ),
-        );
+    final location = Location(
+      latitude: _selectedPlace!.latitude,
+      longitude: _selectedPlace!.longitude,
+      address: _selectedPlace!.formattedAddress,
+      placeId: _selectedPlace!.placeId,
+    );
 
+    final onPlacePicked = widget.onPlacePicked;
+    if (onPlacePicked != null) {
+      onPlacePicked(location);
+      Navigator.of(context).pop();
+      return;
+    }
+
+    context.read<TripProvider>().setDestination(location);
     Navigator.of(context).pushNamed(AppRoutes.originSelection);
   }
 
@@ -400,9 +436,9 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
                 elevation: 0,
               ),
               onPressed: _confirm,
-              child: const Text(
-                'Confirm',
-                style: TextStyle(
+              child: Text(
+                widget.confirmLabel ?? 'Confirm',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),

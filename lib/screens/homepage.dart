@@ -174,7 +174,13 @@ class _HomepageState extends State<Homepage> {
       ),
       bottomNavigationBar: BottomNav(
         currentIndex: _bottomNavIndex,
-        onTap: (index) => setState(() => _bottomNavIndex = index),
+        onTap: (index) {
+          if (index == 1) {
+            Navigator.of(context).pushNamed(AppRoutes.tripHistory);
+          } else {
+            setState(() => _bottomNavIndex = index);
+          }
+        },
       ),
     );
   }
@@ -189,9 +195,6 @@ class _TopBar extends StatelessWidget {
     return TopBar(
       onNotificationTap: () {
         Navigator.of(context).pushNamed(AppRoutes.notifications);
-      },
-      onAlertTap: () {
-        Navigator.of(context).pushNamed(AppRoutes.alertsEmergency);
       },
       onProfileTap: () {
         Navigator.of(context).pushNamed(AppRoutes.profile);
@@ -333,51 +336,124 @@ class _ShortcutsRow extends StatelessWidget {
         ShortcutChip(
           icon: Icons.home_rounded,
           label: 'Home',
-          subtitle: tripProvider.home != null ? 'Saved' : 'Set',
+          subtitle: tripProvider.home != null
+              ? (tripProvider.home!.address ?? 'Saved')
+              : 'Set home',
           color: AppColors.primary,
-          onTap: () {
-            if (tripProvider.home != null) {
-              tripProvider.setOrigin(tripProvider.home!);
-              Navigator.of(context).pushNamed(AppRoutes.originSelection);
-            } else {
-              Navigator.of(context).pushNamed(AppRoutes.originSelection);
-            }
-          },
+          onTap: () => _onPlaceTap(context, tripProvider, isHome: true),
+          onLongPress: () =>
+              _onPlaceLongPress(context, tripProvider, isHome: true),
         ),
         const SizedBox(width: 10),
         ShortcutChip(
           icon: Icons.work_outline_rounded,
           label: 'Work',
-          subtitle: tripProvider.work != null ? 'Saved' : 'Set',
+          subtitle: tripProvider.work != null
+              ? (tripProvider.work!.address ?? 'Saved')
+              : 'Set work',
           color: AppColors.success,
-          onTap: () {
-            if (tripProvider.work != null) {
-              tripProvider.setOrigin(tripProvider.work!);
-              Navigator.of(context).pushNamed(AppRoutes.originSelection);
-            } else {
-              Navigator.of(context).pushNamed(AppRoutes.originSelection);
-            }
-          },
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: RecentTripChip(
-            destination:
-                tripProvider.recentTrips.isNotEmpty
-                    ? (tripProvider.recentTrips.first.destination.address ??
-                        'Recent')
-                    : 'Pasar Senen',
-            onTap: () {
-              if (tripProvider.recentTrips.isNotEmpty) {
-                tripProvider.setDestination(
-                  tripProvider.recentTrips.first.destination,
-                );
-              }
-              Navigator.of(context).pushNamed(AppRoutes.searchDestination);
-            },
-          ),
+          onTap: () => _onPlaceTap(context, tripProvider, isHome: false),
+          onLongPress: () =>
+              _onPlaceLongPress(context, tripProvider, isHome: false),
         ),
       ],
     );
+  }
+
+  /// Tapping a saved place uses it as the destination and continues the
+  /// trip flow; tapping an unsaved place opens the "set place" picker.
+  ///
+  /// The saved place is pushed through the search-destination page (pre-
+  /// filled) so the navigation stack stays consistent — pressing back from
+  /// the origin-selection page returns to the "where to" page, not home.
+  void _onPlaceTap(
+    BuildContext context,
+    TripProvider tripProvider, {
+    required bool isHome,
+  }) {
+    final place = isHome ? tripProvider.home : tripProvider.work;
+    if (place != null) {
+      tripProvider.setDestination(place);
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => SearchDestinationPage(initialLocation: place),
+        ),
+      );
+      return;
+    }
+    _openSetPlace(context, tripProvider, isHome: isHome);
+  }
+
+  /// Long-pressing a saved place offers Change / Remove actions.
+  void _onPlaceLongPress(
+    BuildContext context,
+    TripProvider tripProvider, {
+    required bool isHome,
+  }) {
+    final place = isHome ? tripProvider.home : tripProvider.work;
+    if (place == null) return;
+
+    final label = isHome ? 'Home' : 'Work';
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_location_alt_rounded),
+              title: Text('Change $label'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _openSetPlace(context, tripProvider, isHome: isHome);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded),
+              title: Text('Remove $label'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                if (isHome) {
+                  tripProvider.clearHome();
+                } else {
+                  tripProvider.clearWork();
+                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('$label removed')),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Opens the search picker to set a Home/Work place.
+  Future<void> _openSetPlace(
+    BuildContext context,
+    TripProvider tripProvider, {
+    required bool isHome,
+  }) async {
+    final label = isHome ? 'Home' : 'Work';
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SearchDestinationPage(
+          confirmLabel: 'Save as $label',
+          onPlacePicked: (location) async {
+            if (isHome) {
+              tripProvider.setHome(location);
+            } else {
+              tripProvider.setWork(location);
+            }
+          },
+        ),
+      ),
+    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$label saved')),
+      );
+    }
   }
 }

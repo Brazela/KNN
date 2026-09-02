@@ -1,15 +1,11 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/models.dart';
 import '../navigation/navigation.dart';
-import '../providers/providers.dart';
 import '../services/services.dart';
 import '../utils/constants.dart';
-import '../utils/helpers.dart';
 import '../utils/parking_utils.dart';
 import 'search_destination.dart';
 
@@ -34,29 +30,6 @@ class _ParkingLocatorPageState extends State<ParkingLocatorPage> {
   _ParkingFilter _activeFilter = _ParkingFilter.all;
   bool _loading = false;
   String? _error;
-  bool _initialized = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_initialized) return;
-    _initialized = true;
-
-    // Priority: explicit destination > current location > none.
-    final tripProvider = context.read<TripProvider>();
-    final tripDest = tripProvider.destination;
-
-    if (tripDest != null) {
-      _destination = tripDest;
-      _searchParking(tripDest);
-    } else {
-      final currentLoc = tripProvider.currentLocation;
-      if (currentLoc != null) {
-        _destination = currentLoc;
-        _searchParking(currentLoc);
-      }
-    }
-  }
 
   // -------------------------------------------------------------------------
   // Data fetching
@@ -182,11 +155,24 @@ class _ParkingLocatorPageState extends State<ParkingLocatorPage> {
   // -------------------------------------------------------------------------
 
   Future<void> _changeDestination() async {
-    // SearchDestinationPage sets TripProvider.destination internally.
-    // After the user selects a destination and pops back,
-    // didChangeDependencies will detect the change and trigger a
-    // fresh parking search.
-    await Navigator.of(context).pushNamed(AppRoutes.searchDestination);
+    // Reuse the existing location-selection mechanism (SearchDestinationPage)
+    // in "pick a place" mode. The picked location is returned here so we can
+    // search for parking near it, without entering the trip (origin) flow.
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SearchDestinationPage(
+          onPlacePicked: (location) async {
+            if (!mounted) return;
+            setState(() {
+              _destination = location;
+              _allSpots = [];
+              _filteredSpots = [];
+            });
+            _searchParking(location);
+          },
+        ),
+      ),
+    );
   }
 
   // -------------------------------------------------------------------------

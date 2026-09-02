@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../utils/constants.dart';
+import '../utils/weather_utils.dart';
 
 /// Displays weather information for the origin, destination, and route
 /// as horizontally scrollable compact cards.
@@ -53,7 +54,7 @@ class WeatherStatusWidget extends StatelessWidget {
                   ),
                   SizedBox(width: 8),
                   Text(
-                    'Rain forecasted — expect traffic delays',
+                    "It's raining — expect traffic delays",
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -91,23 +92,11 @@ class WeatherStatusWidget extends StatelessWidget {
     );
   }
 
-  /// Checks if any forecast contains rain keywords.
+  /// Checks if origin or destination is raining now.
   bool _hasRainForecast() {
-    final forecasts = <Weather?>[
-      originWeather,
-      destinationWeather,
-      if (routeForecast != null && routeForecast!.isNotEmpty) routeForecast!.first,
-    ];
-
-    for (final w in forecasts) {
+    for (final w in [originWeather, destinationWeather]) {
       if (w == null) continue;
-      final summary = w.summaryForecast.toLowerCase();
-      if (summary.contains('hujan') ||
-          summary.contains('ribut') ||
-          summary.contains('petir') ||
-          summary.contains('mendung')) {
-        return true;
-      }
+      if (isRaining(w.summaryForecast)) return true;
     }
     return false;
   }
@@ -180,7 +169,7 @@ class _WeatherCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            weather.summaryForecast,
+            translateWeather(weather.summaryForecast),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(

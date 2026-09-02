@@ -4,12 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/models.dart';
 import '../navigation/navigation.dart';
 import '../services/services.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../utils/map_markers.dart';
+import '../widgets/widgets.dart';
 
 /// Live tracking screen for both transit and driving trips.
 ///
@@ -37,17 +40,42 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
   TransitRoute? _transitRoute;
   Location? _origin;
   Location? _destination;
-  Weather? _weather;
   List<LatLng> _polylinePoints = [];
+  List<String> _steps = [];
+  List<DirectionsStepInfo> _stepInfos = [];
 
   // Tracking state.
-  Timer? _gtfsTimer;
   StreamSubscription<Location>? _locationSub;
-  GTFSVehicle? _currentVehicle;
   Location? _currentPosition;
   double _progress = 0.0;
   String _etaText = 'Calculating…';
   String? _statusMessage;
+
+  /// Total polyline length in km (used to map progress → current step).
+  double _polylineLength = 0.0;
+
+  /// Visible-list index of the current step (auto-advances with progress).
+  int? _currentStepIndex;
+
+  /// Key for the step list so map markers can scroll it into view.
+  final GlobalKey<RouteStepListState> _stepListKey =
+      GlobalKey<RouteStepListState>();
+
+  /// Index into the polyline where the user's from-location sits (nearest
+  /// point, snapped to the road).
+  int _fromPolylineIndex = 0;
+
+  /// The waypoint snapped to the nearest polyline point.
+  LatLng? _snappedFromPoint;
+
+  /// Display label for the waypoint (e.g. "KL118" or the station name).
+  String? _preludeLabel;
+
+  /// Number of steps skipped from the start of the display list. Driving
+  /// hides its trivial first step unless a waypoint was set (in which case
+  /// a synthetic "Go to waypoint" step is prepended and must be shown).
+  int get _skipOffset =>
+      _snappedFromPoint != null ? 0 : (_mode == TravelMode.driving ? 1 : 0);
 
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
@@ -70,9 +98,14 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     _transitRoute = args['transitRoute'] as TransitRoute?;
     _origin = args['origin'] as Location?;
     _destination = args['destination'] as Location?;
-    _weather = args['weather'] as Weather?;
     _polylinePoints =
         (args['polylinePoints'] as List<dynamic>?)?.cast<LatLng>() ?? [];
+    _steps = (args['steps'] as List<dynamic>?)?.cast<String>() ?? [];
+    _stepInfos =
+        (args['stepInfos'] as List<dynamic>?)?.cast<DirectionsStepInfo>() ?? [];
+    _fromPolylineIndex = args['fromPolylineIndex'] as int? ?? 0;
+    _snappedFromPoint = args['snappedFromPoint'] as LatLng?;
+    _preludeLabel = args['preludeLabel'] as String?;
 
     if (_origin == null || _destination == null || _mode == null) {
       setState(() => _statusMessage = 'Missing trip data');
@@ -82,60 +115,231 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     _setupMapOverlays();
 
     if (_mode == TravelMode.transit) {
-      _startTransitTracking();
+      // Static transit route — no live tracking.
+      final mins = _transitRoute?.durationMinutes ?? 0;
+      setState(() {
+        _etaText = mins > 0 ? '$mins min to destination' : 'Transit route';
+      });
     } else {
       _startDrivingTracking();
     }
   }
 
-  /// Draws the route polyline and origin/destination markers on the map.
-  void _setupMapOverlays() {
-    _polylines
-      ..clear()
-      ..add(
+  /// Draws the route polyline, start/destination markers, and numbered
+  /// step pins on the map.
+  Future<void> _setupMapOverlays() async {
+    _polylineLength = _computePolylineLength();
+
+// Build polylines — yellow "get to your start" leg + main route.
+    _polylines.clear();
+    final mainColor = _mode == TravelMode.transit
+        ? AppColors.success
+        : AppColors.primary;
+    if (_snappedFromPoint != null && _fromPolylineIndex > 0) {
+      _polylines.add(
         Polyline(
-          polylineId: const PolylineId('route'),
-          points: _polylinePoints,
-          color: _mode == TravelMode.transit
-              ? AppColors.success
-              : AppColors.primary,
+          polylineId: const PolylineId('prelude'),
+          points: _polylinePoints.sublist(0, _fromPolylineIndex + 1),
+          color: AppColors.prelude,
           width: 5,
           geodesic: true,
         ),
       );
+      _polylines.add(
+        Polyline(
+          polylineId: const PolylineId('route'),
+          points: _polylinePoints.sublist(_fromPolylineIndex),
+          color: mainColor,
+          width: 5,
+          geodesic: true,
+        ),
+      );
+    } else {
+      _polylines.add(
+        Polyline(
+          polylineId: const PolylineId('route'),
+          points: _polylinePoints,
+          color: mainColor,
+          width: 5,
+          geodesic: true,
+        ),
+      );
+    }
 
-    _markers
-      ..clear()
-      ..add(
+    _markers.clear();
+
+    if (_snappedFromPoint != null) {
+      // The waypoint (from-location or nearest station) is the journey's
+      // start point, snapped to the nearest road.
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('start'),
+          position: _snappedFromPoint!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueGreen,
+          ),
+          infoWindow: InfoWindow(
+            title: _preludeLabel ?? 'Start point',
+          ),
+        ),
+      );
+      // The starting GPS position.
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('origin'),
+          position: LatLng(_origin!.latitude, _origin!.longitude),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueAzure,
+          ),
+          infoWindow: const InfoWindow(title: 'Start location'),
+        ),
+      );
+    } else {
+      _markers.add(
         Marker(
           markerId: const MarkerId('origin'),
           position: LatLng(_origin!.latitude, _origin!.longitude),
           icon: BitmapDescriptor.defaultMarkerWithHue(
             BitmapDescriptor.hueGreen,
           ),
-          infoWindow: const InfoWindow(title: 'Origin'),
-        ),
-      )
-      ..add(
-        Marker(
-          markerId: const MarkerId('destination'),
-          position: LatLng(
-            _destination!.latitude,
-            _destination!.longitude,
+          infoWindow: InfoWindow(
+            title: _origin!.address ?? 'Origin',
           ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueRed,
-          ),
-          infoWindow: const InfoWindow(title: 'Destination'),
         ),
       );
+    }
 
+    // Numbered step pins (clickable) — numbering matches the step list.
+    for (var i = _skipOffset; i < _stepInfos.length; i++) {
+      final stepInfo = _stepInfos[i];
+      final stepPos = stepInfo.endLatLng;
+      if (stepPos == null) continue;
+
+      final number = i + 1 - _skipOffset;
+      final markerIcon = await getNumberedMarker(number);
+      _markers.add(
+        Marker(
+          markerId: MarkerId('step_$number'),
+          position: stepPos,
+          icon: markerIcon,
+          infoWindow: InfoWindow(
+            title: 'Step $number',
+            snippet: stepInfo.instruction,
+          ),
+          onTap: () => _onStepMarkerTap(number),
+        ),
+      );
+    }
+
+    // Destination marker.
+    _markers.add(
+      Marker(
+        markerId: const MarkerId('destination'),
+        position: LatLng(
+          _destination!.latitude,
+          _destination!.longitude,
+        ),
+        icon: BitmapDescriptor.defaultMarkerWithHue(
+          BitmapDescriptor.hueRed,
+        ),
+        infoWindow: const InfoWindow(title: 'Destination'),
+      ),
+    );
+
+    if (!mounted) return;
     setState(() {});
 
     // Fit camera to route.
     if (_polylinePoints.isNotEmpty) {
       _fitCameraToRoute();
     }
+  }
+
+  /// Total length of the route polyline in km.
+  double _computePolylineLength() {
+    var total = 0.0;
+    for (var i = 0; i < _polylinePoints.length - 1; i++) {
+      total += calculateDistance(
+        _polylinePoints[i].latitude,
+        _polylinePoints[i].longitude,
+        _polylinePoints[i + 1].latitude,
+        _polylinePoints[i + 1].longitude,
+      );
+    }
+    return total;
+  }
+
+  /// Handles tapping a numbered step pin: shows its info window and
+  /// scrolls the matching step into view in the bottom sheet.
+  void _onStepMarkerTap(int number) {
+    _stepListKey.currentState?.scrollToStep(number - 1);
+  }
+
+  /// Moves the camera to the tapped step's location.
+  void _onStepTap(int visibleIndex) {
+    final stepIndex = visibleIndex + _skipOffset;
+    if (stepIndex >= _stepInfos.length) return;
+    final pos = _stepInfos[stepIndex].endLatLng;
+    if (pos == null || _mapController == null) return;
+    _mapController!.animateCamera(CameraUpdate.newLatLng(pos));
+  }
+
+  /// Determines the current step (visible-list index) from the progress
+  /// fraction along the route polyline.
+  int? _computeCurrentStepIndex() {
+    if (_stepInfos.isEmpty || _polylineLength <= 0) return null;
+    final hasPrelude = _snappedFromPoint != null;
+
+    // Distances along the polyline for the real steps. When a from-location
+    // was set, the synthetic "Go to from" step (index 0) is skipped here —
+    // it is highlighted only before the first real step is reached.
+    final start = hasPrelude ? 1 : 0;
+    final cumDists = <double>[];
+    for (var i = start; i < _stepInfos.length; i++) {
+      final end = _stepInfos[i].endLatLng;
+      cumDists.add(end == null ? 0 : _distanceAlongPolyline(end));
+    }
+
+    final traveled = _progress * _polylineLength;
+    var current = -1;
+    for (var i = 0; i < cumDists.length; i++) {
+      if (cumDists[i] <= traveled) current = i;
+    }
+
+    // Map the real-step index back to a visible-list index. With a prelude,
+    // the synthetic step occupies visible index 0, so real step i is at
+    // visible index i + 1.
+    final visible = hasPrelude ? current + 1 : current - _skipOffset;
+    if (visible < 0) return 0; // still before the first real step
+    return visible;
+  }
+
+  /// Distance in km from the route start to [point] along the polyline.
+  double _distanceAlongPolyline(LatLng point) {
+    var nearest = 0;
+    var best = double.infinity;
+    for (var i = 0; i < _polylinePoints.length; i++) {
+      final d = calculateDistance(
+        point.latitude,
+        point.longitude,
+        _polylinePoints[i].latitude,
+        _polylinePoints[i].longitude,
+      );
+      if (d < best) {
+        best = d;
+        nearest = i;
+      }
+    }
+    var cum = 0.0;
+    for (var i = 0; i < nearest; i++) {
+      cum += calculateDistance(
+        _polylinePoints[i].latitude,
+        _polylinePoints[i].longitude,
+        _polylinePoints[i + 1].latitude,
+        _polylinePoints[i + 1].longitude,
+      );
+    }
+    return cum;
   }
 
   /// Moves the camera to fit the entire route.
@@ -163,144 +367,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
         80,
       ),
     );
-  }
-
-  // ─── Transit tracking ───
-
-  /// Starts a 30-second timer that polls GTFS realtime feeds.
-  void _startTransitTracking() {
-    _pollGTFSRealtime(); // immediate first poll
-    _gtfsTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) => _pollGTFSRealtime(),
-    );
-  }
-
-  /// Fetches realtime vehicle positions from all agencies and updates
-  /// the map with the matching vehicle.
-  Future<void> _pollGTFSRealtime() async {
-    final gtfsService = context.read<GTFSService>();
-
-    final agencies = [
-      (agency: 'prasarana', category: 'rapid-rail-kl'),
-      (agency: 'prasarana', category: 'rapid-bus-kl'),
-      (agency: 'ktmb', category: null),
-    ];
-
-    try {
-      final futures = agencies.map((a) {
-        return gtfsService
-            .fetchGTFSRealtime(a.agency, category: a.category)
-            .catchError((_) => <GTFSVehicle>[]);
-      });
-
-      final results = await Future.wait(futures);
-      final allVehicles = results.expand((v) => v).toList();
-
-      // Find a vehicle matching the trip ID.
-      GTFSVehicle? matched;
-      if (_transitRoute != null) {
-        matched = allVehicles.firstWhere(
-          (v) => v.tripId == _transitRoute!.id,
-          orElse: () => const GTFSVehicle(vehicleId: ''),
-        );
-        if (matched.vehicleId.isEmpty) matched = null;
-      }
-
-      // Fallback: nearest vehicle to origin if no trip match.
-      matched ??= _findNearestVehicle(allVehicles, _origin!);
-
-      if (matched != null && mounted) {
-        setState(() {
-          _currentVehicle = matched;
-          _statusMessage = null;
-        });
-        _updateVehicleMarker(matched);
-        _calculateTransitProgress(matched);
-      } else if (mounted) {
-        setState(() => _statusMessage = 'No realtime vehicle data available');
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _statusMessage = 'Realtime update failed: $e');
-      }
-    }
-  }
-
-  /// Finds the nearest vehicle to a given location.
-  GTFSVehicle? _findNearestVehicle(List<GTFSVehicle> vehicles, Location loc) {
-    GTFSVehicle? nearest;
-    var bestDistance = double.infinity;
-
-    for (final v in vehicles) {
-      if (v.latitude == null || v.longitude == null) continue;
-      final distance = calculateDistance(
-        loc.latitude,
-        loc.longitude,
-        v.latitude!,
-        v.longitude!,
-      );
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        nearest = v;
-      }
-    }
-
-    return nearest;
-  }
-
-  /// Adds or updates the vehicle marker on the map.
-  void _updateVehicleMarker(GTFSVehicle vehicle) {
-    if (vehicle.latitude == null || vehicle.longitude == null) return;
-
-    _markers.removeWhere((m) => m.markerId.value == 'vehicle');
-    _markers.add(
-      Marker(
-        markerId: const MarkerId('vehicle'),
-        position: LatLng(vehicle.latitude!, vehicle.longitude!),
-        icon: BitmapDescriptor.defaultMarkerWithHue(
-          BitmapDescriptor.hueAzure,
-        ),
-        infoWindow: InfoWindow(
-          title: vehicle.label ?? 'Vehicle',
-          snippet: 'Speed: ${((vehicle.speed ?? 0) * 3.6).toStringAsFixed(0)} km/h',
-        ),
-        rotation: vehicle.bearing ?? 0,
-      ),
-    );
-
-    setState(() {});
-  }
-
-  /// Calculates transit progress based on vehicle distance to destination.
-  void _calculateTransitProgress(GTFSVehicle vehicle) {
-    if (vehicle.latitude == null || vehicle.longitude == null) return;
-
-    final distanceToDestination = calculateDistance(
-      vehicle.latitude!,
-      vehicle.longitude!,
-      _destination!.latitude,
-      _destination!.longitude,
-    );
-
-    final totalDistance = calculateDistance(
-      _origin!.latitude,
-      _origin!.longitude,
-      _destination!.latitude,
-      _destination!.longitude,
-    );
-
-    if (totalDistance <= 0) return;
-
-    final progress = 1.0 - (distanceToDestination / totalDistance).clamp(0.0, 1.0);
-    final etaMinutes = (distanceToDestination / 0.5).ceil(); // rough estimate: 30 km/h avg
-
-    setState(() {
-      _progress = progress;
-      _etaText = etaMinutes <= 1
-          ? 'Arriving soon'
-          : '$etaMinutes min to destination';
-    });
   }
 
   // ─── Driving tracking ───
@@ -395,6 +461,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
       _etaText = etaMinutes <= 1
           ? 'Arriving soon'
           : '$etaMinutes min to destination';
+      _currentStepIndex = _computeCurrentStepIndex();
     });
   }
 
@@ -412,11 +479,33 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     }
   }
 
+  /// Opens Google Maps with the destination as the waypoint (driving only).
+  Future<void> _openInGoogleMaps() async {
+    final dest = _destination;
+    if (dest == null) return;
+    final uri = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1'
+      '&destination=${dest.latitude},${dest.longitude}',
+    );
+    final launched = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open Google Maps')),
+      );
+    }
+  }
+
   /// Navigates back to the comparison screen for an alternative route.
+  ///
+  /// Pops back to the existing comparison page in the navigation stack so
+  /// the user can still go back to change the origin/destination afterwards
+  /// (instead of wiping the stack and landing on the homepage).
   void _alternativeRoute() {
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      AppRoutes.comparison,
-      (route) => route.isFirst,
+    Navigator.of(context).popUntil(
+      (route) => route.settings.name == AppRoutes.comparison,
     );
   }
 
@@ -454,7 +543,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
 
   @override
   void dispose() {
-    _gtfsTimer?.cancel();
     _locationSub?.cancel();
     _mapController?.dispose();
     super.dispose();
@@ -596,17 +684,13 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
             ),
           ),
 
-          // Bottom status card.
-          if (_statusMessage == null || _currentVehicle != null || _currentPosition != null)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 16,
-              child: _buildStatusCard(accentColor),
-            ),
+          // Bottom sheet with live status + step list.
+          if (_mode != null &&
+              (_statusMessage == null || _currentPosition != null))
+            _buildBottomSheet(accentColor),
 
-          // Status message overlay.
-          if (_statusMessage != null)
+          // Status message overlay (shown only when there's no live data yet).
+          if (_statusMessage != null && _currentPosition == null)
             Positioned(
               left: 16,
               right: 16,
@@ -618,157 +702,189 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     );
   }
 
-  Widget _buildStatusCard(Color accentColor) {
-    final hasRain = _hasRainForecast();
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 20,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Progress bar.
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: _progress,
-                backgroundColor: AppColors.border,
-                valueColor: AlwaysStoppedAnimation<Color>(accentColor),
-                minHeight: 8,
+  Widget _buildBottomSheet(Color accentColor) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.42,
+      minChildSize: 0.18,
+      maxChildSize: 0.85,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x1A000000),
+                blurRadius: 20,
+                offset: Offset(0, -4),
               ),
-            ),
-            const SizedBox(height: 12),
-
-            // ETA and mode.
-            Row(
-              children: [
-                Container(
+            ],
+          ),
+          child: Column(
+            children: [
+              // Drag handle.
+              Center(
+                child: Container(
                   width: 40,
-                  height: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
                   decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    _mode == TravelMode.transit
-                        ? Icons.directions_transit_rounded
-                        : Icons.directions_car_rounded,
-                    color: accentColor,
-                    size: 20,
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _etaText,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${(_progress * 100).toStringAsFixed(0)}% complete',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
 
-            // Rain warning.
-            if (hasRain) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF7ED),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: const Color(0xFFFDBA74),
-                    width: 1,
-                  ),
-                ),
-                child: const Row(
+              // Live status (progress, ETA, actions).
+              _buildStatusCardContent(accentColor),
+
+              const Divider(height: 24, indent: 20, endIndent: 20),
+
+              // Steps header.
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
                   children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
+                    const Icon(
+                      Icons.format_list_numbered_rounded,
                       size: 16,
-                      color: Color(0xFFEA580C),
+                      color: AppColors.textSecondary,
                     ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Rain forecasted — expect delays',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFFEA580C),
-                        ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Steps',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${_steps.length} steps',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(height: 4),
+
+              // Step list (auto-highlights the current step).
+              Expanded(
+                child: RouteStepList(
+                  key: _stepListKey,
+                  steps: _steps,
+                  stepInfos: _stepInfos,
+                  mode: _mode!,
+                  skipFirstStep: _snappedFromPoint != null ? false : null,
+                  accentColor: accentColor,
+                  currentStepIndex: _currentStepIndex,
+                  onStepTap: _onStepTap,
+                  scrollController: scrollController,
+                ),
+              ),
             ],
+          ),
+        );
+      },
+    );
+  }
 
-            const SizedBox(height: 12),
-            const Divider(height: 1),
-            const SizedBox(height: 12),
+  Widget _buildStatusCardContent(Color accentColor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ETA and mode.
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  _mode == TravelMode.transit
+                      ? Icons.directions_transit_rounded
+                      : Icons.directions_car_rounded,
+                  color: accentColor,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _etaText,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
 
-            // Quick actions.
-            Row(
-              children: [
-                Expanded(
-                  child: _ActionButton(
-                    icon: Icons.share_location_rounded,
-                    label: 'Share ETA',
-                    onTap: _shareEta,
+          // Open in Google Maps (driving only).
+          if (_mode == TravelMode.driving) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _openInGoogleMaps,
+                icon: const Icon(Icons.map_rounded, size: 18),
+                label: const Text('Open in Google Maps'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                Expanded(
-                  child: _ActionButton(
-                    icon: Icons.alt_route_rounded,
-                    label: 'Alternative',
-                    onTap: _alternativeRoute,
-                  ),
-                ),
-                Expanded(
-                  child: _ActionButton(
-                    icon: Icons.cancel_rounded,
-                    label: 'Cancel',
-                    color: Colors.red,
-                    onTap: _cancelTrip,
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
-        ),
+
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+
+          // Quick actions.
+          Row(
+            children: [
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.share_location_rounded,
+                  label: 'Share ETA',
+                  onTap: _shareEta,
+                ),
+              ),
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.alt_route_rounded,
+                  label: 'Alternative',
+                  onTap: _alternativeRoute,
+                ),
+              ),
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.cancel_rounded,
+                  label: 'Cancel',
+                  color: Colors.red,
+                  onTap: _cancelTrip,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -810,9 +926,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
             ElevatedButton(
               onPressed: _cancelTrip,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 48),
+ 
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -825,15 +939,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     );
   }
 
-  bool _hasRainForecast() {
-    if (_weather == null) return false;
-    final summary = _weather!.summaryForecast.toLowerCase();
-    return summary.contains('hujan') ||
-        summary.contains('ribut') ||
-        summary.contains('petir') ||
-        summary.contains('mendung');
   }
-}
 
 /// A compact action button for the live tracking bottom card.
 class _ActionButton extends StatelessWidget {

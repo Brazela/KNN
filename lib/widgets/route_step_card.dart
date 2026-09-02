@@ -16,6 +16,8 @@ class RouteStepCard extends StatelessWidget {
     required this.duration,
     this.status,
     this.accentColor = AppColors.primary,
+    this.isActive = false,
+    this.isCompleted = false,
     super.key,
   });
 
@@ -37,19 +39,39 @@ class RouteStepCard extends StatelessWidget {
   /// Accent color for the step number badge.
   final Color accentColor;
 
+  /// When true, highlights this step as the current/active one.
+  final bool isActive;
+
+  /// When true, renders a check badge and dims the step (already done).
+  final bool isCompleted;
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+    final descriptionColor = isCompleted
+        ? AppColors.textMuted
+        : AppColors.textPrimary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: isActive
+            ? accentColor.withValues(alpha: 0.08)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        border: isActive
+            ? Border.all(color: accentColor.withValues(alpha: 0.5), width: 1.2)
+            : null,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Step number badge — matches the numbered map marker style.
+          // Completed steps show a check instead of the number.
           Container(
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: accentColor,
+              color: isCompleted ? AppColors.success : accentColor,
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 2),
               boxShadow: const [
@@ -61,14 +83,20 @@ class RouteStepCard extends StatelessWidget {
               ],
             ),
             child: Center(
-              child: Text(
-                '$stepNumber',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
+              child: isCompleted
+                  ? const Icon(
+                      Icons.check_rounded,
+                      size: 18,
+                      color: Colors.white,
+                    )
+                  : Text(
+                      '$stepNumber',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: 12),
@@ -81,7 +109,13 @@ class RouteStepCard extends StatelessWidget {
               color: AppColors.background,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: AppColors.textSecondary, size: 18),
+            child: Icon(
+              icon,
+              color: isCompleted
+                  ? AppColors.textMuted
+                  : AppColors.textSecondary,
+              size: 18,
+            ),
           ),
           const SizedBox(width: 12),
 
@@ -92,10 +126,10 @@ class RouteStepCard extends StatelessWidget {
               children: [
                 Text(
                   description,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimary,
+                    fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                    color: descriptionColor,
                     height: 1.4,
                   ),
                 ),
@@ -110,10 +144,12 @@ class RouteStepCard extends StatelessWidget {
           // Duration.
           Text(
             duration,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+              color: isCompleted
+                  ? AppColors.textMuted
+                  : AppColors.textSecondary,
             ),
           ),
         ],

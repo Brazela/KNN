@@ -9,6 +9,7 @@ import '../navigation/navigation.dart';
 import '../providers/providers.dart';
 import '../services/services.dart';
 import '../utils/constants.dart';
+import '../utils/helpers.dart';
 import '../widgets/widgets.dart';
 
 /// Full-screen overlay page for selecting the trip origin.
@@ -166,25 +167,27 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
     }
   }
 
-  void _selectRecent() {
-    final recent = context.read<TripProvider>().recentTrips;
-    if (recent.isNotEmpty) {
-      final loc = recent.first.origin;
-      setState(() {
-        _selectedOrigin = loc;
-        _selectedOriginLabel = 'Recent: ${loc.address ?? 'Saved'}';
-        _pickerCenter = LatLng(loc.latitude, loc.longitude);
-        _searchController.text = '🕐 ${loc.address ?? 'Recent'}';
-      });
-    }
-  }
-
   // --- Confirm ---
 
   void _confirm() {
     if (_selectedOrigin == null) return;
 
-    context.read<TripProvider>().setOrigin(_selectedOrigin!);
+    final tripProvider = context.read<TripProvider>();
+    final destination = tripProvider.destination;
+
+    if (destination != null && isSameLocation(_selectedOrigin!, destination)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Origin and destination can\'t be the same place. '
+            'Please pick a different location.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    tripProvider.setOrigin(_selectedOrigin!);
     Navigator.of(context).pushNamed(AppRoutes.comparison);
   }
 
@@ -338,14 +341,6 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
                     label: 'Work',
                     color: AppColors.success,
                     onTap: _selectWork,
-                  ),
-                // Recent.
-                if (tripProvider.recentTrips.isNotEmpty)
-                  _QuickChip(
-                    icon: Icons.history_rounded,
-                    label: 'Recent',
-                    color: const Color(0xFF6B7280),
-                    onTap: _selectRecent,
                   ),
               ],
             ),

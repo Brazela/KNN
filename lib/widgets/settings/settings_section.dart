@@ -1,0 +1,77 @@
+import 'package:flutter/material.dart';
+
+import '../../utils/constants.dart';
+
+/// A titled, card-style section used to group related settings rows.
+///
+/// Mirrors the card treatment used across the app (white background,
+/// rounded corners, hairline border, soft shadow — see
+/// `widgets/cost_comparison_card.dart`) and adds an uppercase eyebrow label
+/// so a long settings list stays scannable.
+class SettingsSection extends StatelessWidget {
+  /// Creates a [SettingsSection].
+  const SettingsSection({
+    required this.title,
+    required this.icon,
+    required this.children,
+    super.key,
+  });
+
+  /// Section title, e.g. "General".
+  final String title;
+
+  /// Icon shown beside [title].
+  final IconData icon;
+
+  /// Rows inside this section. A thin divider is drawn between each.
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 16,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: AppColors.textMuted),
+              const SizedBox(width: 8),
+              Text(
+                title.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  color: AppColors.textMuted,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          for (int i = 0; i < children.length; i++) ...[
+            children[i],
+            if (i != children.length - 1) ...[
+              const SizedBox(height: 14),
+              const Divider(height: 1, color: AppColors.border),
+              const SizedBox(height: 14),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}

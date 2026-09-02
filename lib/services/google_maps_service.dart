@@ -40,6 +40,10 @@ class GoogleMapsService {
       if (t == 'hospital' || t == 'health') return '🏥';
       if (t == 'gas_station') return '⛽';
       if (t == 'park' || t == 'parking') return '🅿️';
+      if (t == 'car_repair') return '🔧';
+      if (t == 'atm' || t == 'bank') return '🏧';
+      if (t == 'pharmacy') return '💊';
+      if (t == 'electric_vehicle_charging_station') return '🔌';
       if (t == 'museum' || t == 'art_gallery') return '🏛️';
     }
     return '📍';

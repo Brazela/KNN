@@ -38,6 +38,16 @@ abstract class AppRoutes {
   /// User profile route.
   static const String profile = '/profile';
 
+  /// Nearby services route.
+  static const String nearbyServices = '/nearby-services';
+
+  /// Saved route detail/comparison route. Requires a [SavedRoute] passed
+  /// as the route's `arguments`.
+  static const String savedRouteComparison = '/saved-route-comparison';
+
+  /// Insights & analytics dashboard route.
+  static const String insightsDashboard = '/insights-dashboard';
+
   /// Fuel price history route.
   static const String fuelPriceHistory = '/fuel-price-history';
 
@@ -60,7 +70,8 @@ abstract class AppRoutes {
 
   /// Builds the widget for a named route.
   ///
-  /// TODO: Replace placeholder pages with real screen implementations.
+  /// TODO: Replace remaining placeholder pages with real screen
+  /// implementations.
   static Widget _buildPage(String? name, Object? arguments) {
     switch (name) {
       case home:
@@ -85,13 +96,23 @@ abstract class AppRoutes {
       case tripHistory:
         return const TripHistoryPage();
       case favorites:
-        return const _PlaceholderPage(title: 'Favorites');
+        return const FavoritesPage();
       case notifications:
-        return const _PlaceholderPage(title: 'Notifications');
+        return const NotificationsPage();
       case settings:
-        return const _PlaceholderPage(title: 'Settings');
+        return const SettingsPage();
+      case alertsEmergency:
+        return const _PlaceholderPage(title: 'Alerts & Emergency');
       case profile:
-        return const _PlaceholderPage(title: 'Profile');
+        return const ProfilePage();
+      case nearbyServices:
+        return const NearbyServicesPage();
+      case savedRouteComparison:
+        return arguments is SavedRoute
+            ? SavedRouteComparisonPage(route: arguments)
+            : const _PlaceholderPage(title: 'Saved Route');
+      case insightsDashboard:
+        return const InsightsDashboardPage();
       case parkingLocator:
         return const ParkingLocatorPage();
       default:

@@ -1,0 +1,31 @@
+name: knn
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.2
+  http: ^1.2.2
+  archive: ^3.6.1
+  gtfs_realtime_bindings: ^1.1.0
+  protobuf: ^3.1.0
+  geolocator: ^13.0.2
+  google_maps_flutter: ^2.9.0
+  flutter_polyline_points: ^2.1.0
+  intl: ^0.19.0
+  json_annotation: ^4.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.13
+  json_serializable: ^6.8.0
+
+flutter:
+  uses-material-design: true

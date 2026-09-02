@@ -348,8 +348,14 @@ class GoogleMapsService {
     Location origin,
     Location destination, {
     String mode = 'driving',
+    List<Location> waypoints = const [],
   }) async {
-    final result = await _fetchDirectionsRaw(origin, destination, mode: mode);
+    final result = await _fetchDirectionsRaw(
+      origin,
+      destination,
+      mode: mode,
+      waypoints: waypoints,
+    );
     return result;
   }
 
@@ -380,6 +386,7 @@ class GoogleMapsService {
     Location destination, {
     required String mode,
     bool alternatives = false,
+    List<Location> waypoints = const [],
   }) async {
     final params = <String, String>{
       'origin': '${origin.latitude},${origin.longitude}',
@@ -389,6 +396,11 @@ class GoogleMapsService {
     };
     if (alternatives) {
       params['alternatives'] = 'true';
+    }
+    if (waypoints.isNotEmpty) {
+      params['waypoints'] = waypoints
+          .map((w) => '${w.latitude},${w.longitude}')
+          .join('|');
     }
 
     final uri = _buildUri(
@@ -439,18 +451,22 @@ class GoogleMapsService {
     final polylinePoints = overviewPolyline?['points'] as String? ?? '';
 
     final legs = route['legs'] as List<dynamic>? ?? [];
-    final leg = legs.isNotEmpty ? legs.first as Map<String, dynamic> : null;
 
     final stepInfos = <DirectionsStepInfo>[];
     final steps = <String>[];
     var distanceMeters = 0;
     var durationSeconds = 0;
 
-    if (leg != null) {
+    // A route may contain multiple legs when waypoints are used (e.g.
+    // current location → from-location → destination). Aggregate steps,
+    // distance, and duration across every leg so the result reflects the
+    // whole journey.
+    for (final legJson in legs) {
+      final leg = legJson as Map<String, dynamic>;
       final distance = leg['distance'] as Map<String, dynamic>?;
       final duration = leg['duration'] as Map<String, dynamic>?;
-      distanceMeters = distance?['value'] as int? ?? 0;
-      durationSeconds = duration?['value'] as int? ?? 0;
+      distanceMeters += distance?['value'] as int? ?? 0;
+      durationSeconds += duration?['value'] as int? ?? 0;
 
       final stepList = leg['steps'] as List<dynamic>? ?? [];
       for (final s in stepList) {

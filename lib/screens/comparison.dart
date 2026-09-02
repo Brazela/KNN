@@ -494,18 +494,47 @@ class _ComparisonPageState extends State<ComparisonPage> {
         },
       );
     } else if (_selectedMode == TravelMode.driving && _drivingRoute != null) {
+      final currentLoc = tripProvider.currentLocation;
+      // If the user picked a specific from-location (not their current
+      // position), route from the current location first, then to the
+      // from-location, then continue to the destination.
+      final via = (currentLoc != null && !_isSameLocation(currentLoc, origin))
+          ? origin
+          : null;
+      final routeOrigin = via != null ? currentLoc : origin;
+
       Navigator.of(context).pushNamed(
         AppRoutes.routeDetails,
         arguments: {
           'mode': TravelMode.driving,
           'drivingRoute': _drivingRoute,
-          'origin': origin,
+          'origin': routeOrigin,
+          'via': via,
           'destination': destination,
           'weather': _originWeather,
           'comparison': _comparison,
         },
       );
     }
+  }
+
+  /// Returns true when [a] and [b] refer to the same place, either by
+  /// matching Google place IDs or by matching coordinates (rounded to
+  /// ~5 decimal places, roughly 1 m).
+  bool _isSameLocation(Location a, Location b) {
+    if (a.placeId != null &&
+        b.placeId != null &&
+        a.placeId!.isNotEmpty &&
+        a.placeId == b.placeId) {
+      return true;
+    }
+
+    const precision = 5;
+    final latA = double.parse(a.latitude.toStringAsFixed(precision));
+    final lngA = double.parse(a.longitude.toStringAsFixed(precision));
+    final latB = double.parse(b.latitude.toStringAsFixed(precision));
+    final lngB = double.parse(b.longitude.toStringAsFixed(precision));
+    return latA == latB && lngA == lngB;
   }
 
   @override

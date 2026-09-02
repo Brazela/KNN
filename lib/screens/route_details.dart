@@ -45,6 +45,11 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
   Weather? _weather;
   Comparison? _comparison;
 
+  /// An intermediate stop the user must pass through (e.g. a selected
+  /// from-location) before reaching the final destination. When set, the
+  /// route is: current location → [via] → destination.
+  Location? _via;
+
   // Real-time vehicle tracking overlay.
   List<GTFSVehicle> _realtimeVehicles = [];
   Timer? _realtimeTimer;
@@ -81,6 +86,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
     _transitRoute = args['transitRoute'] as TransitRoute?;
     _drivingRoute = args['drivingRoute'] as DrivingRoute?;
     _origin = args['origin'] as Location?;
+    _via = args['via'] as Location?;
     _destination = args['destination'] as Location?;
     _weather = args['weather'] as Weather?;
     _comparison = args['comparison'] as Comparison?;
@@ -106,11 +112,12 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
         _origin!,
         _destination!,
         mode: modeStr,
+        waypoints: _via != null ? [_via!] : const [],
       );
 
       _polylinePoints = result.polylinePoints;
 
-      // Build markers — origin + destination + numbered step checkpoints.
+      // Build markers — origin + via + destination + numbered step checkpoints.
       _markers
         ..clear()
         ..add(
@@ -123,6 +130,22 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
             infoWindow: const InfoWindow(title: 'Origin'),
           ),
         );
+
+      // Waypoint (from-location) marker — the stop before the destination.
+      if (_via != null) {
+        _markers.add(
+          Marker(
+            markerId: const MarkerId('via'),
+            position: LatLng(_via!.latitude, _via!.longitude),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueBlue,
+            ),
+            infoWindow: InfoWindow(
+              title: _via!.address ?? 'From location',
+            ),
+          ),
+        );
+      }
 
       // Add numbered step markers for each route step.
       for (var i = 0; i < result.stepInfos.length; i++) {

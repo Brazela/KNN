@@ -86,6 +86,9 @@ abstract class AppColors {
   /// Success / transit accent green.
   static const Color success = Color(0xFF059669);
 
+  /// Bright yellow used for the "get to your start" prelude leg.
+  static const Color prelude = Color(0xFFFACC15);
+
   /// Dark slate used for status cards.
   static const Color darkSlate = Color(0xFF1E293B);
 

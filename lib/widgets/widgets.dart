@@ -8,6 +8,7 @@ export 'popular_places_widget.dart';
 export 'recommendation_badge.dart';
 export 'recommendation_card.dart';
 export 'route_step_card.dart';
+export 'route_step_list.dart';
 export 'search_input.dart';
 export 'shortcut_chip.dart';
 export 'status_card.dart';

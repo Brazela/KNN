@@ -9,6 +9,7 @@ import '../navigation/navigation.dart';
 import '../providers/providers.dart';
 import '../services/services.dart';
 import '../utils/constants.dart';
+import '../utils/helpers.dart';
 import '../widgets/widgets.dart';
 
 /// Full-screen overlay page for selecting the trip origin.
@@ -174,7 +175,7 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
     final tripProvider = context.read<TripProvider>();
     final destination = tripProvider.destination;
 
-    if (destination != null && _isSameLocation(_selectedOrigin!, destination)) {
+    if (destination != null && isSameLocation(_selectedOrigin!, destination)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -188,25 +189,6 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
 
     tripProvider.setOrigin(_selectedOrigin!);
     Navigator.of(context).pushNamed(AppRoutes.comparison);
-  }
-
-  /// Returns true when [a] and [b] refer to the same place, either by
-  /// matching Google place IDs or by matching coordinates (rounded to
-  /// ~5 decimal places, roughly 1 m).
-  bool _isSameLocation(Location a, Location b) {
-    if (a.placeId != null &&
-        b.placeId != null &&
-        a.placeId!.isNotEmpty &&
-        a.placeId == b.placeId) {
-      return true;
-    }
-
-    const precision = 5;
-    final latA = double.parse(a.latitude.toStringAsFixed(precision));
-    final lngA = double.parse(a.longitude.toStringAsFixed(precision));
-    final latB = double.parse(b.latitude.toStringAsFixed(precision));
-    final lngB = double.parse(b.longitude.toStringAsFixed(precision));
-    return latA == latB && lngA == lngB;
   }
 
   // --- Map picker ---

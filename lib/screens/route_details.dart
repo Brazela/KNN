@@ -12,6 +12,7 @@ import '../services/services.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../utils/map_markers.dart';
+import '../utils/route_prelude.dart';
 import '../widgets/widgets.dart';
 
 /// Displays a full-screen map with the selected route polyline and a
@@ -50,20 +51,31 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
   /// route is: current location → [via] → destination.
   Location? _via;
 
-  // Real-time vehicle tracking overlay.
-  List<GTFSVehicle> _realtimeVehicles = [];
-  Timer? _realtimeTimer;
-  List<String> _vehicleEtaMessages = [];
+  /// All step infos from Directions API (walking + transit + driving).
+  List<DirectionsStepInfo> _stepInfos = [];
 
-  /// Whether the first realtime poll has completed. Prevents flashing
-  /// "No realtime data" before the first fetch returns.
-  bool _realtimeChecked = false;
+  /// All human-readable step instructions.
+  List<String> _steps = [];
 
-  /// Tracks previous vehicle samples (per vehicle) to estimate speed.
-  final Map<String, ({LatLng pos, int ts})> _vehicleSamples = {};
+  /// Key for the step list so map markers can scroll it into view.
+  final GlobalKey<RouteStepListState> _stepListKey =
+      GlobalKey<RouteStepListState>();
 
-  /// Transit step infos from Directions API (only transit steps).
-  List<DirectionsStepInfo> _transitStepInfos = [];
+  /// Index into the polyline where the waypoint (from-location or nearest
+  /// station) sits (nearest point, snapped to the road).
+  int _fromPolylineIndex = 0;
+
+  /// The waypoint snapped to the nearest polyline point.
+  LatLng? _snappedFromPoint;
+
+  /// Display label for the waypoint (e.g. "KL118" or the station name).
+  String? _preludeLabel;
+
+  /// Number of steps skipped from the start of the display list. Driving
+  /// hides its trivial first step unless a waypoint was set (in which case
+  /// a synthetic "Go to waypoint" step is prepended and must be shown).
+  int get _skipOffset =>
+      _snappedFromPoint != null ? 0 : (_mode == TravelMode.driving ? 1 : 0);
 
   @override
   void initState() {
@@ -107,53 +119,119 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
     final mapsService = context.read<GoogleMapsService>();
 
     try {
-      final modeStr = _mode == TravelMode.transit ? 'transit' : 'driving';
-      final result = await mapsService.getDirections(
-        _origin!,
-        _destination!,
-        mode: modeStr,
-        waypoints: _via != null ? [_via!] : const [],
-      );
+      DirectionsResult result;
+      String? preludeLabel;
+
+      if (_mode == TravelMode.transit) {
+        // Transit always routes: current location → nearest station →
+        // destination. The transit plan is computed from the from-location
+        // to determine the departure station.
+        final transitData = await mapsService.getTransitWithStationPrelude(
+          _origin!,
+          _via ?? _origin!,
+          _destination!,
+        );
+        result = transitData.result;
+        if (transitData.preludePointCount > 0) {
+          _fromPolylineIndex = transitData.preludePointCount - 1;
+          _snappedFromPoint = result.polylinePoints[_fromPolylineIndex];
+          preludeLabel = transitData.stationName.isNotEmpty
+              ? transitData.stationName
+              : 'nearest station';
+        }
+      } else {
+        // Driving: if the user set a from-location different from their
+        // current position, route current → from → destination via a
+        // waypoint call.
+        result = await mapsService.getDirections(
+          _origin!,
+          _destination!,
+          mode: 'driving',
+          waypoints: _via != null ? [_via!] : const [],
+        );
+        if (_via != null) {
+          final split = computePreludeSplit(
+            from: _via!,
+            polylinePoints: result.polylinePoints,
+          );
+          _fromPolylineIndex = split.fromPolylineIndex;
+          _snappedFromPoint = split.snappedFromPoint;
+          preludeLabel = _via!.address ?? 'From location';
+        }
+      }
 
       _polylinePoints = result.polylinePoints;
+      _steps = result.steps;
+      _stepInfos = result.stepInfos;
+      _preludeLabel = preludeLabel;
 
-      // Build markers — origin + via + destination + numbered step checkpoints.
-      _markers
-        ..clear()
-        ..add(
+      // Prepend a synthetic "Go to {waypoint}" step so the waypoint
+      // (from-location or nearest station) appears as step 1.
+      if (preludeLabel != null && _snappedFromPoint != null) {
+        final preludeSteps = buildPreludeSteps(
+          fromLabel: preludeLabel,
+          steps: result.steps,
+          stepInfos: result.stepInfos,
+          snappedFromPoint: _snappedFromPoint!,
+        );
+        _steps = preludeSteps.steps;
+        _stepInfos = preludeSteps.stepInfos;
+      }
+
+      // Build markers — start (waypoint) + current location + destination
+      // + numbered step checkpoints.
+      _markers.clear();
+
+      if (_snappedFromPoint != null) {
+        // The waypoint (from-location or nearest station) is the journey's
+        // start point, snapped to the nearest road.
+        _markers.add(
+          Marker(
+            markerId: const MarkerId('start'),
+            position: _snappedFromPoint!,
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueGreen,
+            ),
+            infoWindow: InfoWindow(
+              title: _preludeLabel ?? 'Start point',
+            ),
+          ),
+        );
+        // The real GPS position gets its own "You are here" pin.
+        _markers.add(
+          Marker(
+            markerId: const MarkerId('origin'),
+            position: LatLng(_origin!.latitude, _origin!.longitude),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueAzure,
+            ),
+            infoWindow: const InfoWindow(title: 'You are here'),
+          ),
+        );
+      } else {
+        _markers.add(
           Marker(
             markerId: const MarkerId('origin'),
             position: LatLng(_origin!.latitude, _origin!.longitude),
             icon: BitmapDescriptor.defaultMarkerWithHue(
               BitmapDescriptor.hueGreen,
             ),
-            infoWindow: const InfoWindow(title: 'Origin'),
-          ),
-        );
-
-      // Waypoint (from-location) marker — the stop before the destination.
-      if (_via != null) {
-        _markers.add(
-          Marker(
-            markerId: const MarkerId('via'),
-            position: LatLng(_via!.latitude, _via!.longitude),
-            icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueBlue,
-            ),
             infoWindow: InfoWindow(
-              title: _via!.address ?? 'From location',
+              title: _origin!.address ?? 'Origin',
             ),
           ),
         );
       }
 
-      // Add numbered step markers for each route step.
-      for (var i = 0; i < result.stepInfos.length; i++) {
-        final stepInfo = result.stepInfos[i];
+      // Add numbered step markers for each route step. Numbering matches
+      // the step list (driving skips the trivial first step unless a
+      // from-location was set, in which case the synthetic step is #1).
+      for (var i = _skipOffset; i < _stepInfos.length; i++) {
+        final stepInfo = _stepInfos[i];
         final stepPos = stepInfo.endLatLng;
         if (stepPos == null) continue;
 
-        final number = i + 1;
+        final number = i + 1 - _skipOffset;
         final markerIcon = await getNumberedMarker(number);
         _markers.add(
           Marker(
@@ -164,6 +242,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
               title: 'Step $number',
               snippet: stepInfo.instruction,
             ),
+            onTap: () => _onStepMarkerTap(number),
           ),
         );
       }
@@ -183,26 +262,40 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
         ),
       );
 
-      // Build polyline.
-      _polylines
-        ..clear()
-        ..add(
+      // Build polylines — yellow "get to your start" leg + main route.
+      _polylines.clear();
+      final mainColor = _mode == TravelMode.transit
+          ? AppColors.success
+          : AppColors.primary;
+      if (_snappedFromPoint != null && _fromPolylineIndex > 0) {
+        _polylines.add(
           Polyline(
-            polylineId: const PolylineId('route'),
-            points: _polylinePoints,
-            color: _mode == TravelMode.transit
-                ? AppColors.success
-                : AppColors.primary,
+            polylineId: const PolylineId('prelude'),
+            points: _polylinePoints.sublist(0, _fromPolylineIndex + 1),
+            color: AppColors.prelude,
             width: 5,
             geodesic: true,
           ),
         );
-
-      // Store transit step infos for vehicle matching.
-      if (_mode == TravelMode.transit) {
-        _transitStepInfos = result.stepInfos
-            .where((s) => s.travelMode == 'TRANSIT')
-            .toList();
+        _polylines.add(
+          Polyline(
+            polylineId: const PolylineId('route'),
+            points: _polylinePoints.sublist(_fromPolylineIndex),
+            color: mainColor,
+            width: 5,
+            geodesic: true,
+          ),
+        );
+      } else {
+        _polylines.add(
+          Polyline(
+            polylineId: const PolylineId('route'),
+            points: _polylinePoints,
+            color: mainColor,
+            width: 5,
+            geodesic: true,
+          ),
+        );
       }
 
       if (mounted) {
@@ -214,11 +307,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
 
       // Animate camera to fit the route.
       _fitCameraToRoute();
-
-      // Start real-time vehicle polling for transit mode.
-      if (_mode == TravelMode.transit) {
-        _startRealtimePolling();
-      }
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -257,6 +345,21 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
         80, // padding
       ),
     );
+  }
+
+  /// Handles tapping a numbered step marker: shows its info window and
+  /// scrolls the matching step into view in the bottom sheet.
+  void _onStepMarkerTap(int number) {
+    _stepListKey.currentState?.scrollToStep(number - 1);
+  }
+
+  /// Moves the camera to the tapped step's location.
+  void _onStepTap(int visibleIndex) {
+    final stepIndex = visibleIndex + _skipOffset;
+    if (stepIndex >= _stepInfos.length) return;
+    final pos = _stepInfos[stepIndex].endLatLng;
+    if (pos == null || _mapController == null) return;
+    _mapController!.animateCamera(CameraUpdate.newLatLng(pos));
   }
 
   /// Navigates to the live tracking screen and saves the trip to history.
@@ -328,295 +431,21 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
         'transitRoute': _transitRoute,
         'drivingRoute': _drivingRoute,
         'origin': _origin,
+        'via': _via,
         'destination': _destination,
         'weather': _weather,
         'polylinePoints': _polylinePoints,
+        'steps': _steps,
+        'stepInfos': _stepInfos,
+        'fromPolylineIndex': _fromPolylineIndex,
+        'snappedFromPoint': _snappedFromPoint,
+        'preludeLabel': _preludeLabel,
       },
     );
   }
 
-  /// Starts polling GTFS realtime vehicle positions every 30 seconds.
-  void _startRealtimePolling() {
-    _fetchRealtimeVehicles();
-    _realtimeTimer?.cancel();
-    _realtimeTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) => _fetchRealtimeVehicles(),
-    );
-  }
-
-  /// Fetches live vehicle positions filtered by the route's transit mode and line.
-  Future<void> _fetchRealtimeVehicles() async {
-    try {
-      final gtfsService = context.read<GTFSService>();
-
-      // Only fetch vehicles matching the route's transit mode.
-      final transitMode = _transitRoute?.type;
-      final vehicles = await gtfsService.fetchVehiclesByTransitMode(transitMode);
-      if (!mounted) return;
-
-      // Get the line name(s) the user will actually ride (e.g. "T800", "KJ").
-      final lineNames = _transitStepInfos
-          .map((s) => s.transitInfo?.lineName ?? '')
-          .where((n) => n.isNotEmpty)
-          .toList();
-      final lineNameLower = lineNames.isNotEmpty ? lineNames.first.toLowerCase() : '';
-
-      // Get departure station info from the first transit step.
-      LatLng? departureCoords;
-      String departureStationName = '';
-      if (_transitStepInfos.isNotEmpty) {
-        final firstTransit = _transitStepInfos.first;
-        departureCoords = firstTransit.startLatLng;
-        departureStationName = firstTransit.transitInfo?.departureStop ?? '';
-      }
-
-      // Filter vehicles:
-      // 1. Must be on the correct route/line (match routeId or label to line name)
-      // 2. Must be within 5 km of the departure station (not 20 km of midpoint)
-      final filtered = vehicles.where((v) {
-        // Match by routeId or label against the line name.
-        final vRoute = (v.routeId ?? '').toLowerCase();
-        final vLabel = (v.label ?? '').toLowerCase();
-        final vId = (v.vehicleId ?? '').toLowerCase();
-        final matchesLine = lineNameLower.isEmpty ||
-            vRoute.contains(lineNameLower) ||
-            vLabel.contains(lineNameLower) ||
-            vId.contains(lineNameLower);
-
-        if (!matchesLine) return false;
-
-        // Must be near the departure station.
-        if (departureCoords != null) {
-          final dist = calculateDistance(
-            v.latitude!, v.longitude!,
-            departureCoords.latitude, departureCoords.longitude,
-          );
-          if (dist >= 5.0) return false; // too far
-          // Skip buses that have already passed the station.
-          if (!_isApproachingStation(v, departureCoords)) return false;
-          return true;
-        }
-        return true;
-      }).toList();
-
-      // Find the vehicle nearest to the departure station.
-      GTFSVehicle? nearestVehicle;
-      double nearestDist = double.infinity;
-      String nearestEtaMsg = '';
-
-      // Build vehicle markers.
-      _markers.removeWhere((m) => m.markerId.value.startsWith('rt_'));
-      for (final v in filtered) {
-        final vehicleType = _inferVehicleType(v);
-        final plate = v.label ?? v.vehicleId;
-        final lineTag = lineNames.isNotEmpty ? lineNames.first : '';
-
-        // Speed: prefer position-derived estimate, else feed speed.
-        final estimatedKmh = _estimateSpeedKmh(v);
-        final feedMs = v.speed ?? 0;
-        final feedKmh = (feedMs > 0.5 && feedMs < 33.4) ? feedMs * 3.6 : null;
-        final effectiveKmh = estimatedKmh ?? feedKmh;
-        final speedKmh = effectiveKmh != null
-            ? '${effectiveKmh.toStringAsFixed(0)} km/h'
-            : '';
-
-        // Distance from vehicle to departure station.
-        double distToStation = double.infinity;
-        String? distanceMsg;
-        if (departureCoords != null) {
-          distToStation = calculateDistance(
-            v.latitude!, v.longitude!,
-            departureCoords.latitude, departureCoords.longitude,
-          );
-          if (distToStation < 5.0) {
-            distanceMsg = '${distToStation.toStringAsFixed(2)} km from $departureStationName';
-          }
-        }
-
-        // ETA using actual vehicle speed if available.
-        String? etaText;
-        if (distToStation < 5.0) {
-          final etaSpeedKmh = effectiveKmh ?? _defaultSpeedKmh(vehicleType);
-          final etaMinutes = ((distToStation / etaSpeedKmh) * 60).ceil();
-          etaText = etaMinutes <= 1 ? '<1 min away' : '$etaMinutes min away';
-        }
-
-        // Track nearest vehicle.
-        if (distToStation < nearestDist) {
-          nearestDist = distToStation;
-          nearestVehicle = v;
-          if (distToStation < 5.0) {
-            final etaSpeedKmh = effectiveKmh ?? _defaultSpeedKmh(vehicleType);
-            final etaMin = ((distToStation / etaSpeedKmh) * 60).ceil();
-            final etaStr = etaMin <= 1 ? '<1 min' : '$etaMin min';
-            nearestEtaMsg = '$lineTag $plate arriving at $departureStationName in $etaStr';
-          }
-        }
-
-        // Highlight nearest vehicle in red.
-        final isNearest = v.vehicleId == nearestVehicle?.vehicleId &&
-            distToStation < 5.0;
-        final markerIcon = isNearest
-            ? await getVehicleMarker(vehicleType, highlightColor: true)
-            : await getVehicleMarker(vehicleType);
-
-        // Direction indicator.
-        final direction = v.bearing != null
-            ? _bearingToDirection(v.bearing!)
-            : '';
-
-        _markers.add(
-          Marker(
-            markerId: MarkerId('rt_${v.vehicleId}'),
-            position: LatLng(v.latitude!, v.longitude!),
-            icon: markerIcon,
-            rotation: v.bearing ?? 0,
-            infoWindow: InfoWindow(
-              title: '$lineTag $plate${direction.isNotEmpty ? ' · $direction' : ''}',
-              snippet: [
-                if (speedKmh.isNotEmpty) speedKmh,
-                if (etaText != null) etaText,
-                if (distanceMsg != null) distanceMsg,
-              ].join(' · '),
-            ),
-          ),
-        );
-      }
-
-      // Build ETA messages for the bottom sheet.
-      final etaMessages = <String>[];
-      if (nearestVehicle != null && nearestDist < 5.0) {
-        etaMessages.add(nearestEtaMsg);
-      }
-
-      setState(() {
-        _realtimeChecked = true;
-        _realtimeVehicles = filtered;
-        _vehicleEtaMessages = etaMessages;
-      });
-    } catch (_) {
-      // Silently ignore — mark realtime as checked so the UI can show
-      // "No realtime data" instead of hiding the section.
-      if (mounted) {
-        setState(() {
-          _realtimeChecked = true;
-          _vehicleEtaMessages = [];
-        });
-      }
-    }
-  }
-
-  /// Returns true when the vehicle is heading toward the station (not passed).
-  bool _isApproachingStation(GTFSVehicle v, LatLng station) {
-    final bearing = v.bearing;
-    if (bearing == null || v.latitude == null || v.longitude == null) {
-      return true; // no bearing data → assume approaching
-    }
-    final toStation = bearingBetween(
-      v.latitude!,
-      v.longitude!,
-      station.latitude,
-      station.longitude,
-    );
-    var diff = (bearing - toStation).abs() % 360;
-    if (diff > 180) diff = 360 - diff;
-    return diff <= 90; // heading within 90° of the station
-  }
-
-  /// Estimates speed (km/h) from consecutive position samples.
-  double? _estimateSpeedKmh(GTFSVehicle v) {
-    if (v.latitude == null || v.longitude == null) return null;
-    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final ts = v.timestamp ?? now;
-    final prev = _vehicleSamples[v.vehicleId];
-    _vehicleSamples[v.vehicleId] = (
-      pos: LatLng(v.latitude!, v.longitude!),
-      ts: ts,
-    );
-    if (prev == null) return null;
-    final dt = (ts - prev.ts).abs();
-    if (dt <= 0) return null;
-    final distKm = calculateDistance(
-      prev.pos.latitude,
-      prev.pos.longitude,
-      v.latitude!,
-      v.longitude!,
-    );
-    return (distKm / dt) * 3600;
-  }
-
-  /// Returns a reasonable default speed (km/h) for a vehicle type when
-  /// realtime speed data is unavailable.
-  double _defaultSpeedKmh(String vehicleType) {
-    switch (vehicleType) {
-      case 'BUS':
-        return 25.0;
-      case 'SUBWAY':
-      case 'METRO':
-        return 40.0;
-      case 'TRAIN':
-      case 'RAIL':
-        return 50.0;
-      case 'TRAM':
-      case 'LIGHT_RAIL':
-        return 30.0;
-      case 'MONORAIL':
-        return 35.0;
-      default:
-        return 30.0;
-    }
-  }
-
-  /// Infers the vehicle type string from a [GTFSVehicle] for marker icon.
-  String _inferVehicleType(GTFSVehicle vehicle) {
-    // First check the transit step info for the actual vehicle type.
-    if (_transitStepInfos.isNotEmpty) {
-      final ti = _transitStepInfos.first.transitInfo;
-      if (ti != null) {
-        final vt = ti.vehicleType.toUpperCase();
-        if (vt == 'BUS' || vt == 'SUBWAY' || vt == 'METRO' ||
-            vt == 'TRAIN' || vt == 'RAIL' || vt == 'HEAVY_RAIL' ||
-            vt == 'COMMUTER_TRAIN' || vt == 'TRAM' || vt == 'LIGHT_RAIL' ||
-            vt == 'MONORAIL') {
-          return vt;
-        }
-      }
-    }
-
-    // Fallback: infer from vehicle IDs.
-    final id = (vehicle.routeId ?? '').toLowerCase() +
-        (vehicle.label ?? '').toLowerCase();
-    if (id.contains('train') || id.contains('rail') || id.contains('ktm')) {
-      return 'TRAIN';
-    }
-    if (id.contains('subway') || id.contains('metro') || id.contains('mrt')) {
-      return 'SUBWAY';
-    }
-    if (id.contains('lrt') || id.contains('light')) {
-      return 'TRAM';
-    }
-    if (id.contains('monorail')) {
-      return 'MONORAIL';
-    }
-    return 'BUS';
-  }
-
-  /// Converts a bearing in degrees to a cardinal direction string.
-  String _bearingToDirection(double bearing) {
-    if (bearing < 22.5 || bearing >= 337.5) return 'Northbound';
-    if (bearing < 67.5) return 'NE-bound';
-    if (bearing < 112.5) return 'Eastbound';
-    if (bearing < 157.5) return 'SE-bound';
-    if (bearing < 202.5) return 'Southbound';
-    if (bearing < 247.5) return 'SW-bound';
-    if (bearing < 292.5) return 'Westbound';
-    return 'NW-bound';
-  }
-
   @override
   void dispose() {
-    _realtimeTimer?.cancel();
     _mapController?.dispose();
     super.dispose();
   }
@@ -914,78 +743,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
 
               const Divider(height: 24, indent: 20, endIndent: 20),
 
-              // Vehicle ETA messages — shown for transit mode with live vehicles.
-              if (_mode == TravelMode.transit && _realtimeChecked) ...[
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.directions_bus_rounded,
-                              size: 14, color: AppColors.textSecondary),
-                          SizedBox(width: 6),
-                          Text(
-                            'Live vehicle updates',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      if (_vehicleEtaMessages.isNotEmpty)
-                        ...List.generate(_vehicleEtaMessages.length, (i) {
-                          return Padding(
-                            padding: EdgeInsets.only(bottom: i < _vehicleEtaMessages.length - 1 ? 4 : 0),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('• ', style: TextStyle(
-                                  fontSize: 12, color: AppColors.success,
-                                )),
-                                Expanded(
-                                  child: Text(
-                                    _vehicleEtaMessages[i],
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textSecondary,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        })
-                      else
-                        const Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('• ', style: TextStyle(
-                              fontSize: 12, color: AppColors.textMuted,
-                            )),
-                            Expanded(
-                              child: Text(
-                                'No realtime data available for this service',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textMuted,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      const SizedBox(height: 10),
-                    ],
-                  ),
-                ),
-              ],
-
               // Steps list — uses string steps as primary (always reliable),
               // enhanced with icons/durations from stepInfos when available.
               // Driving: skips the first step (index 0) which is the user's
@@ -993,93 +750,16 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
               // Transit: keeps all steps so the first one is always the walk
               // to the station ("find a way to go to the station").
               Expanded(
-                child: ListView.builder(
-                  controller: scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount:
-                      (_directions?.steps.length ?? 0) +
-                      (_mode == TravelMode.driving ? 0 : 1),
-                  itemBuilder: (context, index) {
-                    final steps = _directions!.steps;
-                    final skipFirstStep = _mode == TravelMode.driving;
-                    if (index == steps.length - (skipFirstStep ? 1 : 0)) {
-                      // Start trip button at the bottom.
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        child: ElevatedButton(
-                          onPressed: _startTrip,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: accentColor,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            minimumSize: const Size(double.infinity, 56),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: const Text(
-                            'Start Trip',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-
-                    // Determine the best icon and duration for this step.
-                    // +1 offset only for driving: skip current-location step.
-                    final stepIndex = index + (skipFirstStep ? 1 : 0);
-                    final stepInfos = _directions?.stepInfos ?? [];
-                    final hasRich = stepIndex < stepInfos.length;
-                    IconData stepIcon;
-                    String? duration;
-
-                    if (hasRich) {
-                      final si = stepInfos[stepIndex];
-                      final durSec = si.durationSeconds;
-                      if (si.travelMode == 'WALKING') {
-                        stepIcon = Icons.directions_walk_rounded;
-                        duration = durSec > 0 ? '${(durSec / 60).ceil()}m' : '';
-                      } else if (si.travelMode == 'TRANSIT') {
-                        stepIcon = _vehicleIcon(
-                          si.transitInfo?.vehicleType ?? '',
-                        );
-                        duration = durSec > 0 ? '${(durSec / 60).ceil()}m' : '';
-                      } else {
-                        stepIcon = _stepIcon(steps[stepIndex]);
-                        duration = durSec > 0 ? '${(durSec / 60).ceil()}m' : '';
-                      }
-                    } else {
-                      stepIcon = _stepIcon(steps[stepIndex]);
-                      duration = '';
-                    }
-
-                    // Build the description: use string step as primary text,
-                    // with transit line details from stepInfos as a subtitle.
-                    final stepText = steps[stepIndex];
-                    String description;
-                    if (hasRich &&
-                        stepInfos[stepIndex].travelMode == 'TRANSIT' &&
-                        stepInfos[stepIndex].transitInfo != null) {
-                      final ti = stepInfos[stepIndex].transitInfo!;
-                      description = '$stepText\n'
-                          '  ${ti.vehicleName}: ${ti.lineName}'
-                          '  · ${ti.departureStop} → ${ti.arrivalStop}'
-                          '${ti.numStops > 0 ? ' · ${ti.numStops} stops' : ''}';
-                    } else {
-                      description = stepText;
-                    }
-
-                    return RouteStepCard(
-                      stepNumber: index + 1,
-                      icon: stepIcon,
-                      description: description,
-                      duration: duration ?? '',
-                      accentColor: accentColor,
-                    );
-                  },
+                child: RouteStepList(
+                  key: _stepListKey,
+                  steps: _steps,
+                  stepInfos: _stepInfos,
+                  mode: _mode!,
+                  skipFirstStep: _snappedFromPoint != null ? false : null,
+                  accentColor: accentColor,
+                  onStepTap: _onStepTap,
+                  onStartTrip: _startTrip,
+                  scrollController: scrollController,
                 ),
               ),
             ],
@@ -1087,56 +767,5 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
         );
       },
     );
-  }
-
-  /// Maps a Google vehicle type to a Flutter icon.
-  IconData _vehicleIcon(String vehicleType) {
-    switch (vehicleType.toUpperCase()) {
-      case 'BUS':
-        return Icons.directions_bus_rounded;
-      case 'SUBWAY':
-      case 'METRO':
-        return Icons.subway_rounded;
-      case 'TRAIN':
-      case 'RAIL':
-      case 'HEAVY_RAIL':
-      case 'COMMUTER_TRAIN':
-        return Icons.train_rounded;
-      case 'TRAM':
-      case 'LIGHT_RAIL':
-        return Icons.tram_rounded;
-      case 'MONORAIL':
-        return Icons.mode_fan_off_rounded;
-      default:
-        return Icons.directions_transit_rounded;
-    }
-  }
-
-  /// Chooses an appropriate icon based on step text content (driving fallback).
-  IconData _stepIcon(String step) {
-    final lower = step.toLowerCase();
-    if (lower.contains('turn left')) return Icons.turn_left_rounded;
-    if (lower.contains('turn right')) return Icons.turn_right_rounded;
-    if (lower.contains('straight') || lower.contains('continue')) {
-      return Icons.straight_rounded;
-    }
-    if (lower.contains('roundabout') || lower.contains('rotary')) {
-      return Icons.roundabout_right_rounded;
-    }
-    if (lower.contains('merge')) return Icons.merge_type_rounded;
-    if (lower.contains('exit') || lower.contains('ramp')) {
-      return Icons.exit_to_app_rounded;
-    }
-    if (lower.contains('walk') || lower.contains('foot')) {
-      return Icons.directions_walk_rounded;
-    }
-    if (lower.contains('bus')) return Icons.directions_bus_rounded;
-    if (lower.contains('train') || lower.contains('rail')) {
-      return Icons.train_rounded;
-    }
-    if (lower.contains('subway') || lower.contains('metro')) {
-      return Icons.subway_rounded;
-    }
-    return Icons.navigation_rounded;
   }
 }

@@ -2,8 +2,29 @@ import 'dart:math' show cos, sqrt, asin, pi, sin, atan2;
 
 import 'package:intl/intl.dart';
 
+import '../models/models.dart';
+
 /// Earth radius in kilometres used by the Haversine formula.
 const double _earthRadiusKm = 6371.0;
+
+/// Returns true when [a] and [b] refer to the same place, either by
+/// matching Google place IDs or by matching coordinates (rounded to
+/// ~5 decimal places, roughly 1 m).
+bool isSameLocation(Location a, Location b) {
+  if (a.placeId != null &&
+      b.placeId != null &&
+      a.placeId!.isNotEmpty &&
+      a.placeId == b.placeId) {
+    return true;
+  }
+
+  const precision = 5;
+  final latA = double.parse(a.latitude.toStringAsFixed(precision));
+  final lngA = double.parse(a.longitude.toStringAsFixed(precision));
+  final latB = double.parse(b.latitude.toStringAsFixed(precision));
+  final lngB = double.parse(b.longitude.toStringAsFixed(precision));
+  return latA == latB && lngA == lngB;
+}
 
 /// Calculates the great-circle distance between two coordinates using the
 /// Haversine formula.

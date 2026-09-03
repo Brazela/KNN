@@ -1,5 +1,6 @@
 export 'achievement.dart';
 export 'app_notification.dart';
+export 'car_model.dart';
 export 'comparison.dart';
 export 'cost_trend_point.dart';
 export 'distance_matrix.dart';

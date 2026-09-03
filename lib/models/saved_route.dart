@@ -1,11 +1,19 @@
+import 'package:json_annotation/json_annotation.dart';
+
 import 'location.dart';
 import 'trip.dart';
+
+part 'saved_route.g.dart';
 
 /// A transit or driving route the user has bookmarked for one-tap planning.
 ///
 /// Field names deliberately mirror [Trip] (`cost`, `timeMinutes`, `mode`)
 /// so the two types stay easy to convert between once saved routes can be
 /// generated from real trip history.
+///
+/// Now persisted via `services/local_storage_service.dart` — see the note
+/// on `favorite_location.dart` for the `.g.dart` generation step.
+@JsonSerializable()
 class SavedRoute {
   /// Creates a [SavedRoute].
   const SavedRoute({
@@ -17,6 +25,10 @@ class SavedRoute {
     required this.timeMinutes,
     required this.savingsPerTripRM,
   });
+
+  /// Creates a [SavedRoute] from decoded JSON.
+  factory SavedRoute.fromJson(Map<String, dynamic> json) =>
+      _$SavedRouteFromJson(json);
 
   /// Unique identifier.
   final String id;
@@ -37,9 +49,8 @@ class SavedRoute {
   final int timeMinutes;
 
   /// Estimated savings, in MYR, versus the alternative mode, *per trip*.
-  ///
-  /// Matches the Favorites page design ("Saves RM 15/trip"), not a monthly
-  /// figure — that distinction lives on the separate Route Recommendations
-  /// History page instead.
   final double savingsPerTripRM;
+
+  /// Converts this route to a JSON-compatible map.
+  Map<String, dynamic> toJson() => _$SavedRouteToJson(this);
 }

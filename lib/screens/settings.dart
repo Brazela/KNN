@@ -36,6 +36,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final _workAddressController = TextEditingController(text: 'KL Sentral');
 
   // --- Vehicle details ---
+  CarModel _selectedCar = CarModel.custom;
   FuelType _fuelType = FuelType.ron95;
 
   /// Fuel Consumption is shown in km/L (the unit drivers actually think
@@ -72,6 +73,24 @@ class _SettingsPageState extends State<SettingsPage> {
     if (parsed == null) return 'Enter a number';
     if (parsed <= 0) return 'Must be greater than 0';
     return null;
+  }
+
+  /// Handles a Car Model selection.
+  ///
+  /// Picking a specific preset (e.g. "Perodua Myvi") auto-fills Fuel Type
+  /// and Fuel Consumption from it. Picking [CarModel.custom] ("Other")
+  /// leaves both fields exactly as they were, so a user whose car isn't
+  /// listed keeps full manual control — nothing here overwrites their own
+  /// entry with placeholder values.
+  void _onCarModelChanged(CarModel car) {
+    setState(() {
+      _selectedCar = car;
+      if (!car.isCustom) {
+        _fuelType = car.fuelType!;
+        _fuelConsumptionController.text =
+            car.consumptionKmPerL!.toStringAsFixed(2);
+      }
+    });
   }
 
   /// Placeholder action for the About section's links — this build has no
@@ -188,14 +207,29 @@ class _SettingsPageState extends State<SettingsPage> {
                           title: 'Vehicle Details',
                           icon: Icons.directions_car_rounded,
                           children: [
+                            SettingsDropdownTile<CarModel>(
+                              icon: Icons.directions_car_filled_rounded,
+                              label: 'Car Model',
+                              value: _selectedCar,
+                              options: CarModel.predefinedCars,
+                              optionLabel: (o) => o.name,
+                              onChanged: _onCarModelChanged,
+                            ),
                             SettingsDropdownTile<FuelType>(
                               icon: Icons.local_gas_station_rounded,
                               label: 'Fuel Type',
                               value: _fuelType,
                               options: FuelType.values,
                               optionLabel: (o) => o.displayName,
-                              onChanged: (value) =>
-                                  setState(() => _fuelType = value),
+                              onChanged: (value) => setState(() {
+                                _fuelType = value;
+                                // A manual override no longer matches the
+                                // selected preset exactly, so fall back to
+                                // "Other" rather than leave a stale car
+                                // name showing above a value it didn't
+                                // actually provide.
+                                _selectedCar = CarModel.custom;
+                              }),
                             ),
                             SettingsTextFieldTile(
                               icon: Icons.speed_rounded,

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../utils/constants.dart';
-import '../utils/address_utils.dart';
+
 import '../utils/helpers.dart';
 
 class RecommendationCard extends StatelessWidget {
@@ -62,7 +62,7 @@ class RecommendationCard extends StatelessWidget {
                   ),
                 ),
                 TextSpan(
-                  text: shortAddress(trip.origin),
+                  text: trip.origin.address ?? 'Unknown',
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -87,7 +87,7 @@ class RecommendationCard extends StatelessWidget {
                   ),
                 ),
                 TextSpan(
-                  text: shortAddress(trip.destination),
+                  text: trip.destination.address ?? 'Unknown',
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,

@@ -1,5 +1,8 @@
+import 'dart:math';
+
 import 'package:json_annotation/json_annotation.dart';
 
+import 'comparison.dart';
 import 'location.dart';
 import 'weather.dart';
 
@@ -33,6 +36,64 @@ class Trip {
 
   /// Creates a [Trip] from a JSON map.
   factory Trip.fromJson(Map<String, dynamic> json) => _$TripFromJson(json);
+
+  /// Creates a trip record from a [Comparison] and the user's selected
+  /// [TravelMode], matching the numbers shown on the comparison screen.
+  ///
+  /// Used when a route selection is recorded in trip history.
+  factory Trip.fromComparison({
+    required Comparison comparison,
+    required TravelMode mode,
+  }) {
+    final cost = mode == TravelMode.transit
+        ? comparison.transitOption.fare
+        : comparison.drivingOption.fuelCost + comparison.drivingOption.tolls;
+    final timeMinutes = mode == TravelMode.transit
+        ? comparison.transitOption.durationMinutes
+        : (comparison.drivingOption.durationSeconds / 60).round();
+
+    final transitCost = comparison.transitOption.fare;
+    final transitTime = comparison.transitOption.durationMinutes;
+    final drivingCost =
+        comparison.drivingOption.fuelCost + comparison.drivingOption.tolls;
+    final drivingTime = (comparison.drivingOption.durationSeconds / 60).round();
+
+    final recommendedMode = comparison.recommendation.name;
+    final followed = comparison.recommendation.name == mode.name ? 1 : 0;
+
+    // Savings: difference between the mode the user didn't choose and the
+    // one they did. Null when there was no real alternative (no transit
+    // routes), so the UI hides the savings chip.
+    double? savingsCost;
+    int? savingsTime;
+    if (mode == TravelMode.transit) {
+      savingsCost = drivingCost - cost;
+      savingsTime = drivingTime - timeMinutes;
+    } else if (comparison.transitOption.id != 'none') {
+      savingsCost = transitCost - cost;
+      savingsTime = transitTime - timeMinutes;
+    }
+
+    return Trip(
+      id:
+          'trip_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(9999)}',
+      origin: comparison.origin,
+      destination: comparison.destination,
+      mode: mode,
+      cost: cost,
+      timeMinutes: timeMinutes,
+      date: DateTime.now(),
+      weather: comparison.weather,
+      transitCost: transitCost,
+      transitTime: transitTime,
+      drivingCost: drivingCost,
+      drivingTime: drivingTime,
+      recommendedMode: recommendedMode,
+      followedRecommendation: followed,
+      savingsCost: savingsCost,
+      savingsTime: savingsTime,
+    );
+  }
 
   /// Unique trip identifier.
   final String id;

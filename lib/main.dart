@@ -9,7 +9,6 @@ import 'providers/providers.dart';
 import 'screens/screens.dart';
 import 'services/services.dart';
 
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final notificationService = NotificationService();
@@ -27,15 +26,10 @@ Future<void> main() async {
   runApp(KNNApp(notificationService: notificationService));
 }
 
-
-
-
-
 class KNNApp extends StatelessWidget {
-  
+
   const KNNApp({super.key, required this.notificationService});
 
-  
   final NotificationService notificationService;
 
   @override

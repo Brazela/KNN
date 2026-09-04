@@ -6,7 +6,6 @@ import 'local_storage_service.dart';
 import 'notification_service.dart';
 import 'settings_service.dart';
 
-/// Workmanager callback dispatcher. Runs in a background isolate.
 @pragma('vm:entry-point')
 void notificationBackgroundTask() {
   Workmanager().executeTask((task, inputData) async {
@@ -18,8 +17,6 @@ void notificationBackgroundTask() {
   });
 }
 
-/// Checks fuel price and shows an OS notification when a new weekly update
-/// is published. Also usable from the foreground on app start.
 Future<void> runNotificationCheck() async {
   final settings = SettingsService();
   await settings.load();
@@ -28,7 +25,7 @@ Future<void> runNotificationCheck() async {
 
   if (settings.priceAlerts) {
     try {
-      // Latest record + at least 3 previous ones for the notification body.
+
       final history = await FuelPriceService().getFuelPriceHistory(limit: 4);
       if (history.isEmpty) return;
       final latest = history.first;
@@ -47,7 +44,6 @@ Future<void> runNotificationCheck() async {
     } catch (_) {}
   }
 }
-
 
 String _buildFuelPriceMessage(
   FuelPrice latest,
@@ -76,7 +72,6 @@ String _buildFuelPriceMessage(
   return buffer.toString().trimRight();
 }
 
-/// Formats a single price line, e.g. "RON95: RM3.77/L (▼0.05)".
 String _priceLine(String label, double price, double? previous) {
   final base = '$label: RM${price.toStringAsFixed(2)}/L';
   if (previous == null) return base;
@@ -85,7 +80,6 @@ String _priceLine(String label, double price, double? previous) {
   return '$base ($arrow${delta.abs().toStringAsFixed(2)})';
 }
 
-/// Formats a YYYY-MM-DD date string as dd/MM/yyyy.
 String _formatFuelDate(String dateStr) {
   final parsed = DateTime.tryParse(dateStr);
   if (parsed == null) return dateStr;
@@ -94,7 +88,6 @@ String _formatFuelDate(String dateStr) {
   return '$d/$m/${parsed.year}';
 }
 
-/// Fetches past fuel prices and saves them locally.
 Future<void> syncHistory() async {
   final storage = LocalStorageService();
   try {

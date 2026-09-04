@@ -4,9 +4,8 @@ import '../../models/models.dart';
 import '../../services/services.dart';
 import '../../utils/constants.dart';
 
-
 class ServiceCard extends StatelessWidget {
-  /// Creates a [ServiceCard].
+
   const ServiceCard({
     required this.place,
     required this.onViewRoute,
@@ -14,13 +13,10 @@ class ServiceCard extends StatelessWidget {
     super.key,
   });
 
-  /// The place this card displays.
   final NearbyPlace place;
 
-  /// Distance from the reference location, in kilometres, if known.
   final double? distanceKm;
 
-  /// Called when the user taps "View Route".
   final VoidCallback onViewRoute;
 
   String? get _distanceText {

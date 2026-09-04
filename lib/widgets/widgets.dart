@@ -9,7 +9,7 @@ export 'notifications/category_filter_chip.dart';
 export 'notifications/notification_card.dart';
 export 'parking_shortcut_widget.dart';
 export 'popular_places_widget.dart';
-// export 'recent_trip_chip.dart';
+
 export 'recommendation_badge.dart';
 export 'recommendation_card.dart';
 export 'route_step_card.dart';

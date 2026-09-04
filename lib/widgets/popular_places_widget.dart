@@ -7,17 +7,13 @@ import '../services/services.dart';
 import '../utils/helpers.dart';
 import '../utils/constants.dart';
 
-
 class PopularPlacesWidget extends StatefulWidget {
-  /// Creates a [PopularPlacesWidget].
-  ///
-  /// [onPlaceSelected] is called when the user taps a place card.
+
   const PopularPlacesWidget({
     this.onPlaceSelected,
     super.key,
   });
 
-  /// Called with the selected [NearbyPlace] when the user taps a card.
   final ValueChanged<NearbyPlace>? onPlaceSelected;
 
   @override
@@ -44,7 +40,6 @@ class _PopularPlacesWidgetState extends State<PopularPlacesWidget> {
     }
   }
 
-  /// Fetches nearby places and filters to those rated ≥ 4.0.
   Future<void> _loadPlaces(Location location) async {
     setState(() {
       _loading = true;
@@ -53,7 +48,6 @@ class _PopularPlacesWidgetState extends State<PopularPlacesWidget> {
     try {
       final service = context.read<GoogleMapsService>();
 
-      // Search for transit-friendly places nearby.
       final allPlaces = <NearbyPlace>[];
 
       final restaurants = await service.nearbySearch(
@@ -77,7 +71,6 @@ class _PopularPlacesWidgetState extends State<PopularPlacesWidget> {
       );
       allPlaces.addAll(transit);
 
-      // Deduplicate by placeId, filter ≥ 4.0, sort by rating desc, take 10.
       final seen = <String>{};
       final filtered = allPlaces
           .where((p) => p.rating >= 4.0 && seen.add(p.placeId))
@@ -160,7 +153,6 @@ class _PopularPlacesWidgetState extends State<PopularPlacesWidget> {
   }
 }
 
-/// A single horizontally scrollable place card.
 class _PlaceCard extends StatelessWidget {
   const _PlaceCard({
     required this.place,
@@ -178,7 +170,6 @@ class _PlaceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final icon = GoogleMapsService.categoryIcon(place.types);
 
-    // Compute distance from user if coordinates available.
     String? distanceText;
     if (userLat != null && userLng != null) {
       final km = calculateDistance(
@@ -214,7 +205,7 @@ class _PlaceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Photo banner (falls back to category icon when unavailable).
+
             _PlacePhoto(place: place, icon: icon),
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
@@ -232,7 +223,7 @@ class _PlaceCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  // Rating row.
+
                   if (place.rating > 0)
                     Row(
                       children: [
@@ -269,7 +260,7 @@ class _PlaceCard extends StatelessWidget {
                       ],
                     ),
                   const SizedBox(height: 4),
-                  // Vicinity.
+
                   if (place.vicinity != null)
                     Text(
                       place.vicinity!,
@@ -290,8 +281,6 @@ class _PlaceCard extends StatelessWidget {
   }
 }
 
-/// Photo banner for a place card. Shows the place photo when available,
-/// otherwise falls back to the category icon (with a loading spinner).
 class _PlacePhoto extends StatelessWidget {
   const _PlacePhoto({
     required this.place,

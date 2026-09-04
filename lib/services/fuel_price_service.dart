@@ -5,15 +5,11 @@ import 'package:http/http.dart' as http;
 import '../models/models.dart';
 import '../utils/constants.dart';
 
-/// Service responsible for fetching the latest fuel prices from data.gov.my.
 class FuelPriceService {
-  /// Creates a [FuelPriceService].
-  ///
-  /// An optional [http.Client] can be injected for testing.
+
   FuelPriceService({http.Client? client}) : _client = client ?? http.Client();
 
   final http.Client _client;
-
 
   Future<FuelPrice> getFuelPrice() async {
     final response = await _client.get(Uri.parse(ApiUrls.fuelPriceLatestUrl));
@@ -31,7 +27,6 @@ class FuelPriceService {
 
     return FuelPrice.fromJson(data.first as Map<String, dynamic>);
   }
-
 
   Future<List<FuelPrice>> getFuelPriceHistory({int limit = 50}) async {
     final response = await _client.get(

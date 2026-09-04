@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../utils/constants.dart';
 
-/// Dark gradient card showing weather and transit status summary.
 class StatusCard extends StatelessWidget {
-  /// Creates a [StatusCard].
+
   const StatusCard({
     this.weatherText = 'Light rain expected',
     this.temperature = '26°C',
@@ -17,28 +16,20 @@ class StatusCard extends StatelessWidget {
     super.key,
   });
 
-  /// Weather summary text.
   final String weatherText;
 
-  /// Temperature string.
   final String temperature;
 
-  /// First status label.
   final String nextTransitLabel;
 
-  /// First status value.
   final String nextTransitValue;
 
-  /// Second status label.
   final String destinationLabel;
 
-  /// Second status value.
   final String destinationValue;
 
-  /// Third status label.
   final String crowdingLabel;
 
-  /// Third status value.
   final String crowdingValue;
 
   @override
@@ -108,7 +99,6 @@ class StatusCard extends StatelessWidget {
   }
 }
 
-/// Single label/value pair inside the status card.
 class _StatusStat extends StatelessWidget {
   const _StatusStat({required this.label, required this.value});
 

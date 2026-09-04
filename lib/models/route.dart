@@ -4,18 +4,13 @@ import 'gtfs_stop.dart';
 
 part 'route.g.dart';
 
-
 enum TransitMode { train, mrt, lrt, monorail, bus, unknown }
-
 
 enum RealtimeStatus { onTime, delayed, unknown }
 
-
-
-
 @JsonSerializable(fieldRename: FieldRename.snake)
 class TransitRoute {
-  
+
   const TransitRoute({
     required this.id,
     required this.name,
@@ -27,34 +22,25 @@ class TransitRoute {
     this.realtimeStatus = RealtimeStatus.unknown,
   });
 
-  
   factory TransitRoute.fromJson(Map<String, dynamic> json) =>
       _$TransitRouteFromJson(json);
 
-  
   final String id;
 
-  
   final String name;
 
-  
   @JsonKey(fromJson: _modeFromJson, toJson: _modeToJson)
   final TransitMode type;
 
-  
   @JsonKey(toJson: _stopsToJson, fromJson: _stopsFromJson)
   final List<GTFSStop> stops;
 
-  
   final int durationMinutes;
 
-  
   final int transfers;
 
-  
   final double fare;
 
-  
   @JsonKey(fromJson: _statusFromJson, toJson: _statusToJson)
   final RealtimeStatus realtimeStatus;
 
@@ -105,6 +91,5 @@ class TransitRoute {
   static List<GTFSStop> _stopsFromJson(List<dynamic> json) =>
       json.map((e) => GTFSStop.fromJson(e as Map<String, dynamic>)).toList();
 
-  
   Map<String, dynamic> toJson() => _$TransitRouteToJson(this);
 }

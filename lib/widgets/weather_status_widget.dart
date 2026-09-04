@@ -4,10 +4,8 @@ import '../models/models.dart';
 import '../utils/constants.dart';
 import '../utils/weather_utils.dart';
 
-/// Displays weather information for the origin, destination, and route
-/// as horizontally scrollable compact cards.
 class WeatherStatusWidget extends StatelessWidget {
-  /// Creates a [WeatherStatusWidget].
+
   const WeatherStatusWidget({
     this.originWeather,
     this.destinationWeather,
@@ -15,13 +13,10 @@ class WeatherStatusWidget extends StatelessWidget {
     super.key,
   });
 
-  /// Weather at the trip origin.
   final Weather? originWeather;
 
-  /// Weather at the trip destination.
   final Weather? destinationWeather;
 
-  /// Forecast along the route (optional).
   final List<Weather>? routeForecast;
 
   @override
@@ -92,7 +87,6 @@ class WeatherStatusWidget extends StatelessWidget {
     );
   }
 
-  /// Checks if origin or destination is raining now.
   bool _hasRainForecast() {
     for (final w in [originWeather, destinationWeather]) {
       if (w == null) continue;
@@ -102,7 +96,6 @@ class WeatherStatusWidget extends StatelessWidget {
   }
 }
 
-/// A compact weather card for horizontal scrolling.
 class _WeatherCard extends StatelessWidget {
   const _WeatherCard({
     required this.label,
@@ -191,7 +184,6 @@ class _WeatherCard extends StatelessWidget {
     );
   }
 
-  /// Maps a Malay weather summary keyword to a representative emoji.
   String _weatherEmoji(String summary) {
     final lower = summary.toLowerCase();
     if (lower.contains('hujan') && lower.contains('ribut')) return '⛈️';

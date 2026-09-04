@@ -2,19 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../utils/constants.dart';
 
-/// Compact weather chip showing an emoji icon and temperature.
 class WeatherChip extends StatelessWidget {
-  /// Creates a [WeatherChip].
+
   const WeatherChip({
     this.temperature = '26°C',
     this.icon = '🌤️',
     super.key,
   });
 
-  /// Temperature string to display.
   final String temperature;
 
-  /// Weather emoji to display.
   final String icon;
 
   @override

@@ -7,13 +7,11 @@ import 'weather.dart';
 
 part 'comparison.g.dart';
 
-
 enum Recommendation { transit, driving, either }
-
 
 @JsonSerializable(fieldRename: FieldRename.snake)
 class Comparison {
-  
+
   const Comparison({
     required this.origin,
     required this.destination,
@@ -27,26 +25,19 @@ class Comparison {
   factory Comparison.fromJson(Map<String, dynamic> json) =>
       _$ComparisonFromJson(json);
 
-  
   final Location origin;
 
-  
   final Location destination;
 
-  
   final TransitRoute transitOption;
 
-  
   final DrivingRoute drivingOption;
 
-  
   @JsonKey(fromJson: _recommendationFromJson, toJson: _recommendationToJson)
   final Recommendation recommendation;
 
-  
   final String recommendationReason;
 
-  
   final Weather? weather;
 
   static Recommendation _recommendationFromJson(String value) {
@@ -63,6 +54,5 @@ class Comparison {
   static String _recommendationToJson(Recommendation recommendation) =>
       recommendation.name;
 
-  
   Map<String, dynamic> toJson() => _$ComparisonToJson(this);
 }

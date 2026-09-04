@@ -1,10 +1,6 @@
 
-
-
-
-
 class ParkingSpot {
-  
+
   const ParkingSpot({
     required this.placeId,
     required this.name,
@@ -34,9 +30,7 @@ class ParkingSpot {
 
   final double longitude;
 
-  
   final int distanceFromDestinationMeters;
-
 
   final double estimatedPricePerHour;
 
@@ -44,15 +38,12 @@ class ParkingSpot {
 
   final bool? openNow;
 
-  
   final List<String>? weekdayDescriptions;
 
-  
   bool get isFree => estimatedPricePerHour == 0.0;
 
   String? get firstPhotoUrl => photoUrls.isNotEmpty ? photoUrls.first : null;
 
-  
   ParkingSpot copyWith({
     String? placeId,
     String? name,
@@ -90,7 +81,6 @@ class ParkingSpot {
     );
   }
 
-  
   String get formattedDistance {
     if (distanceFromDestinationMeters < 1000) {
       return '${distanceFromDestinationMeters}m';
@@ -98,18 +88,15 @@ class ParkingSpot {
     return '${(distanceFromDestinationMeters / 1000).toStringAsFixed(1)}km';
   }
 
-  
   String get formattedPrice {
     if (estimatedPricePerHour == 0.0) return 'Free';
     return 'RM ${estimatedPricePerHour.toStringAsFixed(2)}/hr';
   }
 
-  
   String get displayName {
     if (name.length <= 32) return name;
     return '${name.substring(0, 29)}…';
   }
-
 
   String? get hoursSummary {
     if (openNow == true) return 'Open now';

@@ -1,10 +1,5 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'saved_route.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 SavedRoute _$SavedRouteFromJson(Map<String, dynamic> json) => SavedRoute(
   id: json['id'] as String,

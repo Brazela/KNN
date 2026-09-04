@@ -5,10 +5,9 @@ import 'trip.dart';
 
 part 'saved_route.g.dart';
 
-
 @JsonSerializable()
 class SavedRoute {
-  
+
   const SavedRoute({
     required this.id,
     required this.origin,
@@ -19,35 +18,25 @@ class SavedRoute {
     required this.savingsPerTripRM,
   });
 
-  
   factory SavedRoute.fromJson(Map<String, dynamic> json) =>
       _$SavedRouteFromJson(json);
 
-  
   final String id;
 
-  
   final Location origin;
 
-  
   final Location destination;
 
-  
   final TravelMode mode;
 
-  
   final double cost;
 
-  
   final int timeMinutes;
 
-  
   final double savingsPerTripRM;
 
-  
   Map<String, dynamic> toJson() => _$SavedRouteToJson(this);
 
-  
   SavedRoute copyWith({
     Location? origin,
     Location? destination,

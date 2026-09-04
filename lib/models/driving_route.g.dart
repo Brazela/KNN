@@ -1,10 +1,5 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'driving_route.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 DrivingRoute _$DrivingRouteFromJson(Map<String, dynamic> json) => DrivingRoute(
   distanceMeters: (json['distance_meters'] as num).toInt(),

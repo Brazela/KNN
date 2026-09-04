@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../utils/constants.dart';
 
-
 class RouteStepCard extends StatelessWidget {
-  /// Creates a [RouteStepCard].
+
   const RouteStepCard({
     required this.stepNumber,
     required this.icon,
@@ -18,28 +17,20 @@ class RouteStepCard extends StatelessWidget {
     super.key,
   });
 
-  /// 1-based step number displayed in the circular badge.
   final int stepNumber;
 
-  /// Icon representing the step type (walk, train, bus, etc.).
   final IconData icon;
 
-  /// Human-readable step description.
   final String description;
 
-  /// Duration text, e.g. "3 min" or "200m".
   final String duration;
 
-  /// Optional realtime status for transit steps.
   final RealtimeStatus? status;
 
-  /// Accent color for the step number badge.
   final Color accentColor;
 
-  /// When true, highlights this step as the current/active one.
   final bool isActive;
 
-  /// When true, renders a check badge and dims the step (already done).
   final bool isCompleted;
 
   @override
@@ -62,8 +53,7 @@ class RouteStepCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Step number badge — matches the numbered map marker style.
-          // Completed steps show a check instead of the number.
+
           Container(
             width: 32,
             height: 32,
@@ -98,7 +88,6 @@ class RouteStepCard extends StatelessWidget {
           ),
           const SizedBox(width: 12),
 
-          // Icon.
           Container(
             width: 36,
             height: 36,
@@ -116,7 +105,6 @@ class RouteStepCard extends StatelessWidget {
           ),
           const SizedBox(width: 12),
 
-          // Description + status.
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -138,7 +126,6 @@ class RouteStepCard extends StatelessWidget {
             ),
           ),
 
-          // Duration.
           Text(
             duration,
             style: TextStyle(
@@ -155,7 +142,6 @@ class RouteStepCard extends StatelessWidget {
   }
 }
 
-/// A small colored dot + label indicating realtime status.
 class _StatusDot extends StatelessWidget {
   const _StatusDot({required this.status});
 

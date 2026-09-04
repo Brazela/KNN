@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
 
-
 class NotificationService {
   static const _storeKey = 'notifications';
   static const _lastFuelKey = 'last_fuel_price';

@@ -1,10 +1,5 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'nearby_place.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 NearbyPlace _$NearbyPlaceFromJson(Map<String, dynamic> json) => NearbyPlace(
   placeId: json['place_id'] as String,

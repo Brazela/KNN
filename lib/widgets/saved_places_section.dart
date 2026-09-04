@@ -5,15 +5,13 @@ import '../models/models.dart';
 import '../providers/providers.dart';
 import '../utils/constants.dart';
 
-/// Shows the user's saved Home/Work places as tappable list tiles.
 class SavedPlacesSection extends StatelessWidget {
-  /// Creates a [SavedPlacesSection].
+
   const SavedPlacesSection({
     required this.onSelect,
     super.key,
   });
 
-  /// Called with the selected [Location] and its label ('Home'/'Work').
   final void Function(Location location, String label) onSelect;
 
   @override
@@ -60,7 +58,6 @@ class SavedPlacesSection extends StatelessWidget {
   }
 }
 
-/// A single saved-place row (Home or Work).
 class _SavedPlaceTile extends StatelessWidget {
   const _SavedPlaceTile({
     required this.icon,

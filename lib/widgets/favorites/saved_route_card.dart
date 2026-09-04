@@ -4,9 +4,8 @@ import '../../models/models.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 
-
 class SavedRouteCard extends StatelessWidget {
-  /// Creates a [SavedRouteCard].
+
   const SavedRouteCard({
     required this.route,
     required this.onPlanRoute,
@@ -15,16 +14,12 @@ class SavedRouteCard extends StatelessWidget {
     super.key,
   });
 
-  /// The saved route this card displays.
   final SavedRoute route;
 
- 
   final VoidCallback onPlanRoute;
 
-  /// Called when the user long-presses and picks "Edit route".
   final VoidCallback? onEdit;
 
-  /// Called when the user long-presses and picks "Delete route".
   final VoidCallback? onDelete;
 
   bool get _isTransit => route.mode == TravelMode.transit;

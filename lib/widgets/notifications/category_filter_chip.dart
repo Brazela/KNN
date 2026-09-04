@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../utils/constants.dart';
 
-/// A single filter chip at the top of the Notifications page, used to
-/// narrow the list to one category (or show "All").
 class CategoryFilterChip extends StatelessWidget {
-  /// Creates a [CategoryFilterChip].
+
   const CategoryFilterChip({
     required this.label,
     required this.selected,
@@ -13,13 +11,10 @@ class CategoryFilterChip extends StatelessWidget {
     super.key,
   });
 
-  /// Chip label, e.g. "All", "Price".
   final String label;
 
-  /// Whether this chip is the active filter.
   final bool selected;
 
-  /// Called when the user taps this chip.
   final VoidCallback onTap;
 
   @override

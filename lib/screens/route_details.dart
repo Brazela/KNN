@@ -15,9 +15,8 @@ import '../utils/map_markers.dart';
 import '../utils/route_prelude.dart';
 import '../widgets/widgets.dart';
 
-
 class RouteDetailsPage extends StatefulWidget {
-  /// Creates a [RouteDetailsPage].
+
   const RouteDetailsPage({super.key});
 
   @override
@@ -42,35 +41,23 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
   Weather? _weather;
   Comparison? _comparison;
 
-
   bool _fromParking = false;
 
-  
   Location? _via;
 
- 
   List<DirectionsStepInfo> _stepInfos = [];
 
-  /// All human-readable step instructions.
   List<String> _steps = [];
 
-  /// Key for the step list so map markers can scroll it into view.
   final GlobalKey<RouteStepListState> _stepListKey =
       GlobalKey<RouteStepListState>();
 
-  /// Index into the polyline where the waypoint (from-location or nearest
-  /// station) sits (nearest point, snapped to the road).
   int _fromPolylineIndex = 0;
 
-  /// The waypoint snapped to the nearest polyline point.
   LatLng? _snappedFromPoint;
 
-  /// Display label for the waypoint (e.g. "KL118" or the station name).
   String? _preludeLabel;
 
-  /// Number of steps skipped from the start of the display list. Driving
-  /// hides its trivial first step unless a waypoint was set (in which case
-  /// a synthetic "Go to waypoint" step is prepended and must be shown).
   int get _skipOffset =>
       _snappedFromPoint != null ? 0 : (_mode == TravelMode.driving ? 1 : 0);
 
@@ -80,7 +67,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _initFromArgs());
   }
 
-  /// Extracts route arguments and fetches directions.
   void _initFromArgs() {
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is! Map<String, dynamic>) {
@@ -112,7 +98,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
     _fetchDirections();
   }
 
-  /// Fetches turn-by-turn directions and draws the route on the map.
   Future<void> _fetchDirections() async {
     final mapsService = context.read<GoogleMapsService>();
 
@@ -121,9 +106,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
       String? preludeLabel;
 
       if (_mode == TravelMode.transit) {
-        // Transit always routes: current location → nearest station →
-        // destination. The transit plan is computed from the from-location
-        // to determine the departure station.
+
         final transitData = await mapsService.getTransitWithStationPrelude(
           _origin!,
           _via ?? _origin!,
@@ -138,9 +121,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
               : 'nearest station';
         }
       } else {
-        // Driving: if the user set a from-location different from their
-        // current position, route current → from → destination via a
-        // waypoint call.
+
         result = await mapsService.getDirections(
           _origin!,
           _destination!,
@@ -163,8 +144,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
       _stepInfos = result.stepInfos;
       _preludeLabel = preludeLabel;
 
-      // Prepend a synthetic "Go to {waypoint}" step so the waypoint
-      // (from-location or nearest station) appears as step 1.
       if (preludeLabel != null && _snappedFromPoint != null) {
         final preludeSteps = buildPreludeSteps(
           fromLabel: preludeLabel,
@@ -176,13 +155,10 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
         _stepInfos = preludeSteps.stepInfos;
       }
 
-      // Build markers — start (waypoint) + current location + destination
-      // + numbered step checkpoints.
       _markers.clear();
 
       if (_snappedFromPoint != null) {
-        // The waypoint (from-location or nearest station) is the journey's
-        // start point, snapped to the nearest road.
+
         _markers.add(
           Marker(
             markerId: const MarkerId('start'),
@@ -195,7 +171,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
             ),
           ),
         );
-        // The real GPS position gets its own "You are here" pin.
+
         _markers.add(
           Marker(
             markerId: const MarkerId('origin'),
@@ -221,16 +197,13 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
         );
       }
 
-      // Add numbered step markers for each route step. Numbering matches
-      // the step list (driving skips the trivial first step unless a
-      // from-location was set, in which case the synthetic step is #1).
       for (var i = _skipOffset; i < _stepInfos.length; i++) {
         final stepInfo = _stepInfos[i];
         final stepPos = stepInfo.endLatLng;
         if (stepPos == null) continue;
 
         final number = i + 1 - _skipOffset;
-        final markerIcon = await getNumberedMarker(number, size: 24);
+        final markerIcon = await getNumberedMarker(number, size: 32);
         _markers.add(
           Marker(
             markerId: MarkerId('step_$number'),
@@ -245,7 +218,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
         );
       }
 
-      // Destination marker.
       _markers.add(
         Marker(
           markerId: const MarkerId('destination'),
@@ -260,7 +232,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
         ),
       );
 
-      // Build polylines — yellow "get to your start" leg + main route.
       _polylines.clear();
       final mainColor = _mode == TravelMode.transit
           ? AppColors.success
@@ -303,7 +274,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
         });
       }
 
-      // Animate camera to fit the route.
       _fitCameraToRoute();
     } catch (e) {
       if (mounted) {
@@ -318,7 +288,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
     }
   }
 
-  /// Moves the camera to fit all polyline points.
   void _fitCameraToRoute() {
     if (_mapController == null || _polylinePoints.isEmpty) return;
 
@@ -340,18 +309,15 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
           southwest: LatLng(minLat, minLng),
           northeast: LatLng(maxLat, maxLng),
         ),
-        80, // padding
+        80,
       ),
     );
   }
 
-  /// Handles tapping a numbered step marker: shows its info window and
-  /// scrolls the matching step into view in the bottom sheet.
   void _onStepMarkerTap(int number) {
     _stepListKey.currentState?.scrollToStep(number - 1);
   }
 
-  /// Moves the camera to the tapped step's location.
   void _onStepTap(int visibleIndex) {
     final stepIndex = visibleIndex + _skipOffset;
     if (stepIndex >= _stepInfos.length) return;
@@ -360,7 +326,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
     _mapController!.animateCamera(CameraUpdate.newLatLng(pos));
   }
 
-  /// Navigates to the live tracking screen and saves the trip to history.
   void _startTrip() {
     if (_mode == null || _origin == null || _destination == null) return;
 
@@ -373,7 +338,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
     final id =
         'trip_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(9999)}';
 
-    // Recommendation data from comparison.
     double? transitCost;
     int? transitTime;
     double? drivingCost;
@@ -391,7 +355,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
       recommendedMode = _comparison!.recommendation.name;
       followed = _comparison!.recommendation.name == _mode!.name ? 1 : 0;
 
-      // Calculate savings: cost/time difference between recommended and actual.
       if (_comparison!.recommendation == Recommendation.transit) {
         savingsCost = transitCost - cost;
         savingsTime = transitTime - timeMinutes;
@@ -454,7 +417,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          // Full-screen map.
+
           GoogleMap(
             initialCameraPosition: CameraPosition(
               target: _origin != null
@@ -476,7 +439,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
             },
           ),
 
-          // Back button overlay (top-left) + parking origin reminder.
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -506,8 +468,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
                       ),
                     ),
                   ),
-                  // Reminds the user the "from" is the parking spot they
-                  // picked in the parking locator.
+
                   if (_fromParking && _origin != null) ...[
                     const SizedBox(height: 8),
                     Container(
@@ -537,7 +498,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              'From: ${_origin!.address ?? 'parking spot'}',
+                              'From: ${_via?.address ?? _origin!.address ?? 'parking spot'}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -556,7 +517,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
             ),
           ),
 
-          // Zoom controls (top-right).
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -565,7 +525,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Zoom in.
+
                     GestureDetector(
                       onTap: () => _mapController?.animateCamera(
                         CameraUpdate.zoomIn(),
@@ -598,7 +558,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
                       height: 1,
                       color: AppColors.border,
                     ),
-                    // Zoom out.
+
                     GestureDetector(
                       onTap: () => _mapController?.animateCamera(
                         CameraUpdate.zoomOut(),
@@ -632,14 +592,12 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
             ),
           ),
 
-          // Loading overlay.
           if (_loading)
             Container(
               color: Colors.white.withValues(alpha: 0.7),
               child: const Center(child: CircularProgressIndicator()),
             ),
 
-          // Error overlay.
           if (_error != null && !_loading)
             Container(
               color: Colors.white.withValues(alpha: 0.9),
@@ -687,7 +645,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
               ),
             ),
 
-          // Bottom sheet with route details.
           if (!_loading && _error == null)
             _buildBottomSheet(),
         ],
@@ -732,7 +689,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
           ),
           child: Column(
             children: [
-              // Drag handle.
+
               Center(
                 child: Container(
                   width: 40,
@@ -745,7 +702,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
                 ),
               ),
 
-              // Header.
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
@@ -791,12 +747,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
 
               const Divider(height: 24, indent: 20, endIndent: 20),
 
-              // Steps list — uses string steps as primary (always reliable),
-              // enhanced with icons/durations from stepInfos when available.
-              // Driving: skips the first step (index 0) which is the user's
-              // current location ("Head to current location") — not useful.
-              // Transit: keeps all steps so the first one is always the walk
-              // to the station ("find a way to go to the station").
               Expanded(
                 child: RouteStepList(
                   key: _stepListKey,

@@ -3,54 +3,36 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../screens/screens.dart';
 
-
 abstract class AppRoutes {
-  
+
   static const String home = '/';
 
-  
   static const String searchDestination = '/search-destination';
 
-  
   static const String originSelection = '/origin-selection';
 
-  
   static const String comparison = '/comparison';
 
-  
   static const String routeDetails = '/route-details';
 
-  
   static const String liveTracking = '/live-tracking';
 
-  
   static const String tripHistory = '/trip-history';
 
-  
   static const String favorites = '/favorites';
 
-  
   static const String notifications = '/notifications';
 
-  
   static const String settings = '/settings';
 
-  
   static const String nearbyServices = '/nearby-services';
 
-  
   static const String fuelPriceHistory = '/fuel-price-history';
 
-  
   static const String weatherHistory = '/weather-history';
 
-  
   static const String parkingLocator = '/parking-locator';
 
-  
-  
-  
-  
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     return MaterialPageRoute<dynamic>(
       settings: settings,
@@ -58,7 +40,6 @@ abstract class AppRoutes {
     );
   }
 
- 
   static Widget _buildPage(String? name, Object? arguments) {
     switch (name) {
       case home:
@@ -97,12 +78,10 @@ abstract class AppRoutes {
   }
 }
 
-
 class _PlaceholderPage extends StatelessWidget {
-  
+
   const _PlaceholderPage({required this.title});
 
-  
   final String title;
 
   @override

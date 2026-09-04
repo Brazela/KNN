@@ -22,11 +22,9 @@ String weatherEmoji(String summary) {
   return '🌤️';
 }
 
-/// Translates a Malay weather summary to English.
 String translateWeather(String text) {
   final lower = text.toLowerCase().trim();
 
-  // Whole-phrase matches first.
   if (lower == 'tiada hujan') return 'No rain';
   if (lower == 'hujan ringan') return 'Light rain';
   if (lower == 'hujan sederhana') return 'Moderate rain';
@@ -50,7 +48,6 @@ String translateWeather(String text) {
   if (lower == 'berjerebu di beberapa tempat') return 'Hazy in some places';
   if (lower == 'hujan berterusan') return 'Continuous rain';
 
-  // Fallback: replace individual keywords so partial matches still work.
   var result = text;
   const replacements = {
     'Tiada hujan': 'No rain',

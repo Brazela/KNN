@@ -1,12 +1,11 @@
 
 enum NotificationCategory {
-  
+
   price,
 }
 
-
 class AppNotification {
-  
+
   const AppNotification({
     required this.id,
     required this.category,
@@ -16,27 +15,18 @@ class AppNotification {
     this.isRead = false,
   });
 
-  
   final String id;
 
-  
   final NotificationCategory category;
 
-  
   final String title;
 
-  
   final String message;
 
-  
   final DateTime timestamp;
 
-  
   final bool isRead;
 
-  
-  
-  
   AppNotification copyWith({bool? isRead}) {
     return AppNotification(
       id: id,
@@ -48,7 +38,6 @@ class AppNotification {
     );
   }
 
-  
   factory AppNotification.fromJson(Map<String, dynamic> json) {
     return AppNotification(
       id: json['id'] as String,
@@ -63,7 +52,6 @@ class AppNotification {
     );
   }
 
-  
   Map<String, dynamic> toJson() {
     return {
       'id': id,

@@ -39,7 +39,7 @@ class RecommendationCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Date header.
+
           Text(
             formatDateTime(trip.date),
             style: TextStyle(
@@ -101,7 +101,6 @@ class RecommendationCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Recommended badge.
           if (hasRecommendation)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -146,7 +145,6 @@ class RecommendationCard extends StatelessWidget {
             ),
           const SizedBox(height: 12),
 
-          // Transit vs Driving cost/time side by side.
           Row(
             children: [
               if (trip.transitCost != null) ...[
@@ -171,7 +169,6 @@ class RecommendationCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Follow badge + savings/loss.
           if (hasRecommendation) ...[
             Row(
               children: [
@@ -235,7 +232,6 @@ class RecommendationCard extends StatelessWidget {
           ],
           const SizedBox(height: 12),
 
-          // Compare Again button.
           Align(
             alignment: Alignment.centerRight,
             child: TextButton.icon(

@@ -6,12 +6,12 @@ import '../models/models.dart';
 import '../navigation/navigation.dart';
 import '../services/services.dart';
 import '../utils/constants.dart';
+import '../utils/helpers.dart';
 import '../utils/parking_utils.dart';
 import 'search_destination.dart';
 
-
 class ParkingLocatorPage extends StatefulWidget {
-  /// Creates a [ParkingLocatorPage].
+
   const ParkingLocatorPage({super.key});
 
   @override
@@ -25,10 +25,6 @@ class _ParkingLocatorPageState extends State<ParkingLocatorPage> {
   _ParkingFilter _activeFilter = _ParkingFilter.all;
   bool _loading = false;
   String? _error;
-
-  // -------------------------------------------------------------------------
-  // Data fetching
-  // -------------------------------------------------------------------------
 
   Future<void> _searchParking(Location destination) async {
     setState(() {
@@ -67,15 +63,6 @@ class _ParkingLocatorPageState extends State<ParkingLocatorPage> {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Filtering
-  // -------------------------------------------------------------------------
-
-
-  // -------------------------------------------------------------------------
-  // Filtering
-  // -------------------------------------------------------------------------
-
   List<ParkingSpot> _applyFilter(List<ParkingSpot> spots) {
     switch (_activeFilter) {
       case _ParkingFilter.all:
@@ -99,12 +86,8 @@ class _ParkingLocatorPageState extends State<ParkingLocatorPage> {
     });
   }
 
-  // -------------------------------------------------------------------------
-  // Actions
-  // -------------------------------------------------------------------------
-
   Future<void> _navigateToSpot(ParkingSpot spot) async {
-    // Open Google Maps with directions to the parking spot.
+
     final url = Uri.parse(
       'https://www.google.com/maps/dir/?api=1'
       '&destination=${spot.latitude},${spot.longitude}'
@@ -122,7 +105,7 @@ class _ParkingLocatorPageState extends State<ParkingLocatorPage> {
     }
   }
 
-  void _viewRoute(ParkingSpot spot) {
+  Future<void> _viewRoute(ParkingSpot spot) async {
     final dest = _destination;
     if (dest == null) return;
 
@@ -133,22 +116,38 @@ class _ParkingLocatorPageState extends State<ParkingLocatorPage> {
       placeId: spot.placeId,
     );
 
+    Location? currentLoc;
+    try {
+      currentLoc = await context.read<LocationService>().getCurrentLocation();
+    } catch (_) {
+      currentLoc = null;
+    }
+
+    final nearParking = currentLoc != null &&
+        calculateDistance(
+              currentLoc.latitude,
+              currentLoc.longitude,
+              spot.latitude,
+              spot.longitude,
+            ) <
+            0.1;
+
+    final origin =
+        (currentLoc != null && !nearParking) ? currentLoc : parkingLoc;
+    final via = (currentLoc != null && !nearParking) ? parkingLoc : null;
+
+    if (!mounted) return;
     Navigator.of(context).pushNamed(
       AppRoutes.routeDetails,
       arguments: <String, dynamic>{
         'mode': TravelMode.driving,
-        'origin': parkingLoc,
+        'origin': origin,
+        'via': via,
         'destination': dest,
         'fromParking': true,
       },
     );
   }
-
-
-
-  // -------------------------------------------------------------------------
-  // Destination selection
-  // -------------------------------------------------------------------------
 
   Future<void> _changeDestination() async {
 
@@ -168,10 +167,6 @@ class _ParkingLocatorPageState extends State<ParkingLocatorPage> {
       ),
     );
   }
-
-  // -------------------------------------------------------------------------
-  // Build
-  // -------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -272,17 +267,15 @@ class _ParkingLocatorPageState extends State<ParkingLocatorPage> {
   }
 
   Widget _buildBody() {
-    // No destination set yet.
+
     if (_destination == null) {
       return _NoDestinationPrompt(onSetDestination: _changeDestination);
     }
 
-    // Loading state.
     if (_loading) {
       return const _LoadingShimmer();
     }
 
-    // Error state.
     if (_error != null) {
       return _ErrorCard(
         message: _error!,
@@ -290,12 +283,10 @@ class _ParkingLocatorPageState extends State<ParkingLocatorPage> {
       );
     }
 
-    // Empty results.
     if (_filteredSpots.isEmpty) {
       return _EmptyResults(filter: _activeFilter, onRetry: _refresh);
     }
 
-    // Results list.
     return Column(
       children: [
         _ResultsHeader(count: _filteredSpots.length),
@@ -315,14 +306,8 @@ class _ParkingLocatorPageState extends State<ParkingLocatorPage> {
   }
 }
 
-// =============================================================================
-// Sub-widgets
-// =============================================================================
-
-/// Filter options for parking results.
 enum _ParkingFilter { all, paid, free, openNow }
 
-/// Shows the selected destination with a change button.
 class _DestinationBar extends StatelessWidget {
   const _DestinationBar({
     required this.destination,
@@ -421,7 +406,6 @@ class _DestinationBar extends StatelessWidget {
   }
 }
 
-/// Horizontal row of filter chips.
 class _FilterChipRow extends StatelessWidget {
   const _FilterChipRow({
     required this.activeFilter,
@@ -467,7 +451,6 @@ class _FilterChipRow extends StatelessWidget {
   }
 }
 
-/// A single filter chip.
 class _FilterChip extends StatelessWidget {
   const _FilterChip({
     required this.label,
@@ -516,7 +499,6 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-/// Shows the number of results found.
 class _ResultsHeader extends StatelessWidget {
   const _ResultsHeader({required this.count});
 
@@ -538,7 +520,6 @@ class _ResultsHeader extends StatelessWidget {
   }
 }
 
-/// A single parking spot card with real photo, opening hours, and rating.
 class _ParkingCard extends StatelessWidget {
   const _ParkingCard({
     required this.spot,
@@ -572,21 +553,20 @@ class _ParkingCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Photo banner or placeholder.
+
           _PhotoBanner(photoUrl: spot.firstPhotoUrl),
 
-          // Info section.
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Name + distance + rating.
+
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Name.
+
                       Text(
                         spot.displayName,
                         style: const TextStyle(
@@ -599,7 +579,7 @@ class _ParkingCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 6),
-                      // Distance.
+
                       Row(
                         children: [
                           const Icon(Icons.directions_walk_rounded,
@@ -634,7 +614,7 @@ class _ParkingCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Price pill.
+
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 10, vertical: 5),
@@ -670,7 +650,6 @@ class _ParkingCard extends StatelessWidget {
             ),
           ),
 
-          // Hours row.
           if (spot.hoursSummary != null) ...[
             const SizedBox(height: 8),
             Padding(
@@ -700,7 +679,6 @@ class _ParkingCard extends StatelessWidget {
           const SizedBox(height: 10),
           const Divider(height: 1, color: AppColors.border),
 
-          // Action buttons.
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
             child: Row(
@@ -731,7 +709,6 @@ class _ParkingCard extends StatelessWidget {
   }
 }
 
-/// Displays a photo banner from Google Places, or a fallback placeholder.
 class _PhotoBanner extends StatelessWidget {
   const _PhotoBanner({required this.photoUrl});
 
@@ -800,7 +777,6 @@ class _PhotoBanner extends StatelessWidget {
   }
 }
 
-/// A pill-shaped action button for Navigate / View Route.
 class _ActionButton extends StatelessWidget {
   const _ActionButton({
     required this.icon,
@@ -844,11 +820,6 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-// =============================================================================
-// Empty / loading / error states
-// =============================================================================
-
-/// Prompt shown when no destination is selected.
 class _NoDestinationPrompt extends StatelessWidget {
   const _NoDestinationPrompt({required this.onSetDestination});
 
@@ -940,7 +911,6 @@ class _NoDestinationPrompt extends StatelessWidget {
   }
 }
 
-/// Shimmer-like loading placeholder.
 class _LoadingShimmer extends StatelessWidget {
   const _LoadingShimmer();
 
@@ -974,7 +944,6 @@ class _LoadingShimmer extends StatelessWidget {
   }
 }
 
-/// Error state with retry button.
 class _ErrorCard extends StatelessWidget {
   const _ErrorCard({required this.message, required this.onRetry});
 
@@ -1042,7 +1011,6 @@ class _ErrorCard extends StatelessWidget {
   }
 }
 
-/// Empty results state.
 class _EmptyResults extends StatelessWidget {
   const _EmptyResults({required this.filter, required this.onRetry});
 

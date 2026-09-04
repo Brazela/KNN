@@ -3,20 +3,16 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../utils/constants.dart';
 
-/// A full-width pill-shaped badge showing the recommended travel mode
-/// and the reasoning behind it.
 class RecommendationBadge extends StatelessWidget {
-  /// Creates a [RecommendationBadge].
+
   const RecommendationBadge({
     required this.recommendedMode,
     required this.reason,
     super.key,
   });
 
-  /// The recommended travel mode.
   final Recommendation recommendedMode;
 
-  /// Human-readable explanation for the recommendation.
   final String reason;
 
   @override

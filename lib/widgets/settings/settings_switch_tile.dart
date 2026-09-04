@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../utils/constants.dart';
 
-
 class SettingsSwitchTile extends StatelessWidget {
-  /// Creates a [SettingsSwitchTile].
+
   const SettingsSwitchTile({
     required this.icon,
     required this.label,
@@ -14,19 +13,14 @@ class SettingsSwitchTile extends StatelessWidget {
     super.key,
   });
 
-  /// Icon shown at the start of the row.
   final IconData icon;
 
-  /// Row label, e.g. "Dark Mode".
   final String label;
 
-  /// Optional helper text shown under [label].
   final String? subtitle;
 
-  /// Current toggle state.
   final bool value;
 
-  /// Called when the user flips the switch.
   final ValueChanged<bool> onChanged;
 
   @override

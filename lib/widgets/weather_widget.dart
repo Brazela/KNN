@@ -8,12 +8,8 @@ import '../navigation/app_routes.dart';
 import '../utils/constants.dart';
 import '../utils/weather_utils.dart';
 
-/// Displays the current weather forecast for the user's location.
-///
-/// Uses [WeatherService] to fetch today's forecast. Updates on
-/// pull-to-refresh via the parent [RefreshIndicator] that calls [onRefresh].
 class WeatherWidget extends StatefulWidget {
-  /// Creates a [WeatherWidget].
+
   const WeatherWidget({super.key});
 
   @override
@@ -34,7 +30,6 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     }
   }
 
-  /// Re-fetches the current day's weather forecast.
   Future<void> refresh() async {
     final location = context.read<TripProvider>().currentLocation;
     if (location == null) return;
@@ -45,7 +40,6 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     await _loadWeather(location);
   }
 
-  /// Fetches the current day's weather forecast.
   Future<void> _loadWeather(Location location) async {
     setState(() {
       _loading = true;
@@ -75,7 +69,6 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     }
   }
 
-  /// Error state with retry button.
   Widget _buildError() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -143,7 +136,6 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     );
   }
 
-  /// Maps a Malay weather summary keyword to a representative emoji.
   String _weatherEmoji(String summary) {
     final lower = summary.toLowerCase();
     if (lower.contains('hujan') && lower.contains('ribut')) return '⛈️';
@@ -239,7 +231,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
           const SizedBox(height: 12),
           Row(
             children: [
-              // Emoji + location.
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,7 +268,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
                   ],
                 ),
               ),
-              // Min / max temps.
+
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [

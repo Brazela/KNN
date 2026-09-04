@@ -14,18 +14,8 @@ import '../utils/helpers.dart';
 import '../utils/map_markers.dart';
 import '../widgets/widgets.dart';
 
-
-
-
-
-
-
-
-
-
-
 class LiveTrackingPage extends StatefulWidget {
-  
+
   const LiveTrackingPage({super.key});
 
   @override
@@ -35,7 +25,6 @@ class LiveTrackingPage extends StatefulWidget {
 class _LiveTrackingPageState extends State<LiveTrackingPage> {
   GoogleMapController? _mapController;
 
-  
   TravelMode? _mode;
   TransitRoute? _transitRoute;
   Location? _origin;
@@ -44,36 +33,25 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
   List<String> _steps = [];
   List<DirectionsStepInfo> _stepInfos = [];
 
-  
   StreamSubscription<Location>? _locationSub;
   Location? _currentPosition;
   double _progress = 0.0;
   String _etaText = 'Calculating…';
   String? _statusMessage;
 
-  
   double _polylineLength = 0.0;
 
-  
   int? _currentStepIndex;
 
-  
   final GlobalKey<RouteStepListState> _stepListKey =
       GlobalKey<RouteStepListState>();
 
-  
-  
   int _fromPolylineIndex = 0;
 
-  
   LatLng? _snappedFromPoint;
 
-  
   String? _preludeLabel;
 
-  
-  
-  
   int get _skipOffset =>
       _snappedFromPoint != null ? 0 : (_mode == TravelMode.driving ? 1 : 0);
 
@@ -86,7 +64,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _initFromArgs());
   }
 
-  
   void _initFromArgs() {
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is! Map<String, dynamic>) {
@@ -115,7 +92,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     _setupMapOverlays();
 
     if (_mode == TravelMode.transit) {
-      
+
       final mins = _transitRoute?.durationMinutes ?? 0;
       setState(() {
         _etaText = mins > 0 ? '$mins min to destination' : 'Transit route';
@@ -125,11 +102,8 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     }
   }
 
-  
-  
   Future<void> _setupMapOverlays() async {
     _polylineLength = _computePolylineLength();
-
 
     _polylines.clear();
     final mainColor = _mode == TravelMode.transit
@@ -169,8 +143,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     _markers.clear();
 
     if (_snappedFromPoint != null) {
-      
-      
+
       _markers.add(
         Marker(
           markerId: const MarkerId('start'),
@@ -183,7 +156,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
           ),
         ),
       );
-      
+
       _markers.add(
         Marker(
           markerId: const MarkerId('origin'),
@@ -209,14 +182,13 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
       );
     }
 
-    
     for (var i = _skipOffset; i < _stepInfos.length; i++) {
       final stepInfo = _stepInfos[i];
       final stepPos = stepInfo.endLatLng;
       if (stepPos == null) continue;
 
       final number = i + 1 - _skipOffset;
-      final markerIcon = await getNumberedMarker(number, size: 24);
+      final markerIcon = await getNumberedMarker(number, size: 32);
       _markers.add(
         Marker(
           markerId: MarkerId('step_$number'),
@@ -231,7 +203,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
       );
     }
 
-    
     _markers.add(
       Marker(
         markerId: const MarkerId('destination'),
@@ -249,13 +220,11 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     if (!mounted) return;
     setState(() {});
 
-    
     if (_polylinePoints.isNotEmpty) {
       _fitCameraToRoute();
     }
   }
 
-  
   double _computePolylineLength() {
     var total = 0.0;
     for (var i = 0; i < _polylinePoints.length - 1; i++) {
@@ -269,13 +238,10 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     return total;
   }
 
-  
-  
   void _onStepMarkerTap(int number) {
     _stepListKey.currentState?.scrollToStep(number - 1);
   }
 
-  
   void _onStepTap(int visibleIndex) {
     final stepIndex = visibleIndex + _skipOffset;
     if (stepIndex >= _stepInfos.length) return;
@@ -284,15 +250,10 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     _mapController!.animateCamera(CameraUpdate.newLatLng(pos));
   }
 
-  
-  
   int? _computeCurrentStepIndex() {
     if (_stepInfos.isEmpty || _polylineLength <= 0) return null;
     final hasPrelude = _snappedFromPoint != null;
 
-    
-    
-    
     final start = hasPrelude ? 1 : 0;
     final cumDists = <double>[];
     for (var i = start; i < _stepInfos.length; i++) {
@@ -306,15 +267,11 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
       if (cumDists[i] <= traveled) current = i;
     }
 
-    
-    
-    
     final visible = hasPrelude ? current + 1 : current - _skipOffset;
-    if (visible < 0) return 0; 
+    if (visible < 0) return 0;
     return visible;
   }
 
-  
   double _distanceAlongPolyline(LatLng point) {
     var nearest = 0;
     var best = double.infinity;
@@ -342,7 +299,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     return cum;
   }
 
-  
   void _fitCameraToRoute() {
     if (_mapController == null || _polylinePoints.isEmpty) return;
 
@@ -369,9 +325,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     );
   }
 
-  
-
-  
   void _startDrivingTracking() {
     final locationService = context.read<LocationService>();
 
@@ -385,11 +338,9 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
         );
   }
 
-  
   void _onLocationUpdate(Location location) {
     setState(() => _currentPosition = location);
 
-    
     _markers.removeWhere((m) => m.markerId.value == 'current');
     _markers.add(
       Marker(
@@ -402,15 +353,12 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
       ),
     );
 
-    
     _calculateDrivingProgress(location);
   }
 
-  
   void _calculateDrivingProgress(Location location) {
     if (_polylinePoints.length < 2) return;
 
-    
     var nearestIndex = 0;
     var minDistance = double.infinity;
 
@@ -428,7 +376,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
       }
     }
 
-    
     var totalLength = 0.0;
     for (var i = 0; i < _polylinePoints.length - 1; i++) {
       totalLength += calculateDistance(
@@ -439,7 +386,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
       );
     }
 
-    
     var lengthSoFar = 0.0;
     for (var i = 0; i < nearestIndex; i++) {
       lengthSoFar += calculateDistance(
@@ -454,7 +400,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
 
     final progress = (lengthSoFar / totalLength).clamp(0.0, 1.0);
     final remainingKm = totalLength * (1 - progress);
-    final etaMinutes = (remainingKm / 0.8).ceil(); 
+    final etaMinutes = (remainingKm / 0.8).ceil();
 
     setState(() {
       _progress = progress;
@@ -465,9 +411,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     });
   }
 
-  
-
-  
   Future<void> _shareEta() async {
     final message =
         'I\'m on my way! ETA: $_etaText via ${_mode == TravelMode.transit ? 'transit' : 'driving'}.';
@@ -479,7 +422,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     }
   }
 
-  
   Future<void> _openInGoogleMaps() async {
     final dest = _destination;
     if (dest == null) return;
@@ -498,18 +440,12 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     }
   }
 
-  
-  
-  
-  
-  
   void _alternativeRoute() {
     Navigator.of(context).popUntil(
       (route) => route.settings.name == AppRoutes.comparison,
     );
   }
 
-  
   void _cancelTrip() {
     showDialog<void>(
       context: context,
@@ -558,7 +494,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          
+
           GoogleMap(
             initialCameraPosition: CameraPosition(
               target: _origin != null
@@ -580,7 +516,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
             },
           ),
 
-          
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -610,7 +545,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
             ),
           ),
 
-          
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -684,12 +618,10 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
             ),
           ),
 
-          
           if (_mode != null &&
               (_statusMessage == null || _currentPosition != null))
             _buildBottomSheet(accentColor),
 
-          
           if (_statusMessage != null && _currentPosition == null)
             Positioned(
               left: 16,
@@ -722,7 +654,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
           ),
           child: Column(
             children: [
-              
+
               Center(
                 child: Container(
                   width: 40,
@@ -735,12 +667,10 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
                 ),
               ),
 
-              
               _buildStatusCardContent(accentColor),
 
               const Divider(height: 24, indent: 20, endIndent: 20),
 
-              
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
@@ -772,7 +702,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
               ),
               const SizedBox(height: 4),
 
-              
               Expanded(
                 child: RouteStepList(
                   key: _stepListKey,
@@ -800,7 +729,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          
+
           Row(
             children: [
               Container(
@@ -832,7 +761,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
             ],
           ),
 
-          
           if (_mode == TravelMode.driving) ...[
             const SizedBox(height: 12),
             SizedBox(
@@ -857,7 +785,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
           const Divider(height: 1),
           const SizedBox(height: 12),
 
-          
           Row(
             children: [
               Expanded(
@@ -926,7 +853,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
             ElevatedButton(
               onPressed: _cancelTrip,
               style: ElevatedButton.styleFrom(
- 
+
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -940,7 +867,6 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
   }
 
   }
-
 
 class _ActionButton extends StatelessWidget {
   const _ActionButton({

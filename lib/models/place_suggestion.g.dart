@@ -1,10 +1,5 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'place_suggestion.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 PlaceSuggestion _$PlaceSuggestionFromJson(Map<String, dynamic> json) =>
     PlaceSuggestion(

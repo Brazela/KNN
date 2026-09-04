@@ -4,9 +4,8 @@ import '../models/models.dart';
 import '../services/services.dart';
 import 'route_step_card.dart';
 
-
 class RouteStepList extends StatefulWidget {
-  /// Creates a [RouteStepList].
+
   const RouteStepList({
     super.key,
     required this.steps,
@@ -20,49 +19,34 @@ class RouteStepList extends StatefulWidget {
     this.skipFirstStep,
   });
 
-  /// Human-readable step instructions (primary text source).
   final List<String> steps;
 
-  /// Rich step data (icons, durations, transit details) — parallels [steps].
   final List<DirectionsStepInfo> stepInfos;
 
-  /// Travel mode; driving skips the first (trivial) step.
   final TravelMode mode;
 
-  /// Accent color for badges and the active highlight.
   final Color accentColor;
 
-  /// 0-based index (into the visible list) of the current step, or null.
   final int? currentStepIndex;
 
-  /// Called when a step is tapped, with the visible-list index.
   final ValueChanged<int>? onStepTap;
 
-  /// When non-null, a "Start Trip" button is rendered after the last step.
   final VoidCallback? onStartTrip;
 
-  /// Optional scroll controller (e.g. from a DraggableScrollableSheet).
   final ScrollController? scrollController;
 
-  /// When true, the first step is hidden (driving's trivial first step).
-  /// Defaults to `mode == TravelMode.driving`. Set to false when a synthetic
-  /// "Go to from" step was prepended so it is always shown.
   final bool? skipFirstStep;
 
   @override
   State<RouteStepList> createState() => RouteStepListState();
 }
 
-/// State for [RouteStepList], exposing [RouteStepListState.scrollToStep].
 class RouteStepListState extends State<RouteStepList> {
   final List<GlobalKey> _itemKeys = [];
 
-  /// Number of steps skipped from the start (driving skips the trivial
-  /// "head from current location" step unless overridden).
   int get _skipOffset =>
       (widget.skipFirstStep ?? (widget.mode == TravelMode.driving)) ? 1 : 0;
 
-  /// Scrolls the list so the step at [visibleIndex] is in view.
   void scrollToStep(int visibleIndex) {
     if (visibleIndex < 0 || visibleIndex >= _itemKeys.length) return;
     final ctx = _itemKeys[visibleIndex].currentContext;
@@ -100,7 +84,6 @@ class RouteStepListState extends State<RouteStepList> {
       final isCompleted =
           widget.currentStepIndex != null && i < widget.currentStepIndex!;
 
-      // Ensure a key exists for this item.
       while (_itemKeys.length <= i) {
         _itemKeys.add(GlobalKey());
       }
@@ -205,7 +188,6 @@ class RouteStepListState extends State<RouteStepList> {
     );
   }
 
-  /// Maps a Google vehicle type to a Flutter icon.
   IconData _vehicleIcon(String vehicleType) {
     switch (vehicleType.toUpperCase()) {
       case 'BUS':
@@ -228,7 +210,6 @@ class RouteStepListState extends State<RouteStepList> {
     }
   }
 
-  /// Chooses an appropriate icon based on step text content (driving fallback).
   IconData _stepIcon(String step) {
     final lower = step.toLowerCase();
     if (lower.contains('turn left')) return Icons.turn_left_rounded;

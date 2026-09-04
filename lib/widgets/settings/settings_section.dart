@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../utils/constants.dart';
 
-
 class SettingsSection extends StatelessWidget {
-  /// Creates a [SettingsSection].
+
   const SettingsSection({
     required this.title,
     required this.icon,
@@ -12,13 +11,10 @@ class SettingsSection extends StatelessWidget {
     super.key,
   });
 
-  /// Section title, e.g. "General".
   final String title;
 
-  /// Icon shown beside [title].
   final IconData icon;
 
-  /// Rows inside this section. A thin divider is drawn between each.
   final List<Widget> children;
 
   @override

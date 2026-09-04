@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
 
-/// Persists the user's Home and Work places on-device.
 class SavedPlacesService {
   static const _homeKey = 'saved_home';
   static const _workKey = 'saved_work';

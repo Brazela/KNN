@@ -1,10 +1,5 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'comparison.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 Comparison _$ComparisonFromJson(Map<String, dynamic> json) => Comparison(
   origin: Location.fromJson(json['origin'] as Map<String, dynamic>),

@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 import '../utils/constants.dart';
 
-
 class SettingsService extends ChangeNotifier {
   static const _defaultModeKey = 'settings_default_mode';
   static const _carModelKey = 'settings_car_model';

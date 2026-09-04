@@ -1,10 +1,5 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'trip.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 Trip _$TripFromJson(Map<String, dynamic> json) => Trip(
   id: json['id'] as String,

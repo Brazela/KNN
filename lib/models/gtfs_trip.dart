@@ -4,10 +4,9 @@ import 'gtfs_stop.dart';
 
 part 'gtfs_trip.g.dart';
 
-
 @JsonSerializable(fieldRename: FieldRename.snake)
 class GTFSTrip {
-  
+
   const GTFSTrip({
     required this.tripId,
     required this.routeId,
@@ -17,26 +16,19 @@ class GTFSTrip {
     this.stops = const [],
   });
 
-  
   factory GTFSTrip.fromJson(Map<String, dynamic> json) =>
       _$GTFSTripFromJson(json);
 
-  
   final String tripId;
 
-  
   final String routeId;
 
-  
   final String serviceId;
 
-  
   final String? headsign;
 
-  
   final int? directionId;
 
-  
   @JsonKey(toJson: _stopsToJson, fromJson: _stopsFromJson)
   final List<GTFSStop> stops;
 
@@ -46,6 +38,5 @@ class GTFSTrip {
   static List<GTFSStop> _stopsFromJson(List<dynamic> json) =>
       json.map((e) => GTFSStop.fromJson(e as Map<String, dynamic>)).toList();
 
-  
   Map<String, dynamic> toJson() => _$GTFSTripToJson(this);
 }

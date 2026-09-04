@@ -6,9 +6,8 @@ import '../navigation/navigation.dart';
 import '../services/services.dart';
 import '../utils/constants.dart';
 
-
 class FuelPriceWidget extends StatefulWidget {
-  /// Creates a [FuelPriceWidget].
+
   const FuelPriceWidget({super.key});
 
   @override
@@ -30,10 +29,8 @@ class _FuelPriceWidgetState extends State<FuelPriceWidget> {
     }
   }
 
-  /// Re-fetches the latest fuel price record.
   Future<void> refresh() => _loadFuelPrice();
 
-  /// Fetches the latest fuel price record.
   Future<void> _loadFuelPrice() async {
     setState(() {
       _loading = true;
@@ -60,7 +57,6 @@ class _FuelPriceWidgetState extends State<FuelPriceWidget> {
     }
   }
 
-  /// Formats the effective date into a human-readable string.
   String _formatDate(String dateStr) {
     try {
       final parsed = DateTime.parse(dateStr);
@@ -76,26 +72,22 @@ class _FuelPriceWidgetState extends State<FuelPriceWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // Loading state.
+
     if (_loading && _fuelPrice == null) {
       return _buildShimmer();
     }
 
-    // Error state.
     if (_error != null && _fuelPrice == null) {
       return _buildError();
     }
 
-    // Data loaded.
     if (_fuelPrice != null) {
       return _buildContent(_fuelPrice!);
     }
 
-    // Before first load.
     return const SizedBox.shrink();
   }
 
-  /// Card content when data is loaded.
   Widget _buildContent(FuelPrice fuel) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -114,7 +106,7 @@ class _FuelPriceWidgetState extends State<FuelPriceWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: icon + title + date badge.
+
           Row(
             children: [
               Container(
@@ -188,7 +180,7 @@ class _FuelPriceWidgetState extends State<FuelPriceWidget> {
             ],
           ),
           const SizedBox(height: 14),
-          // Main price rows.
+
           _PriceRow(
             label: 'RON 95',
             price: fuel.ron95,
@@ -214,7 +206,7 @@ class _FuelPriceWidgetState extends State<FuelPriceWidget> {
             subtitle: 'East Malaysia',
             color: const Color(0xFF7C3AED),
           ),
-          // Optional subsidised price tiers.
+
           if (fuel.ron95Skps != null ||
               fuel.dieselBudi != null ||
               fuel.dieselSkds != null ||
@@ -252,7 +244,7 @@ class _FuelPriceWidgetState extends State<FuelPriceWidget> {
                 price: fuel.dieselSkds!,
               ),
           ],
-          // Last-updated note.
+
           const SizedBox(height: 8),
           Align(
             alignment: Alignment.centerRight,
@@ -270,7 +262,6 @@ class _FuelPriceWidgetState extends State<FuelPriceWidget> {
     );
   }
 
-  /// Error state with retry button.
   Widget _buildError() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -338,7 +329,6 @@ class _FuelPriceWidgetState extends State<FuelPriceWidget> {
     );
   }
 
-  /// Shimmer placeholder while data loads.
   Widget _buildShimmer() {
     return Container(
       height: 100,
@@ -359,7 +349,6 @@ class _FuelPriceWidgetState extends State<FuelPriceWidget> {
   }
 }
 
-/// A main price row showing a fuel type and its price.
 class _PriceRow extends StatelessWidget {
   const _PriceRow({
     required this.label,
@@ -424,7 +413,6 @@ class _PriceRow extends StatelessWidget {
   }
 }
 
-/// A smaller price row for subsidised fuel tiers.
 class _SubPriceRow extends StatelessWidget {
   const _SubPriceRow({required this.label, required this.price});
 

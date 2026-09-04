@@ -16,7 +16,6 @@ class TripCard extends StatelessWidget {
   final Trip trip;
   final VoidCallback onRepeatTrip;
 
-  /// Optional callback to bookmark this trip as a saved route.
   final VoidCallback? onSaveRoute;
 
   @override

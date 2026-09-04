@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../utils/constants.dart';
 
-
 class SearchInput extends StatelessWidget {
-  /// Creates a [SearchInput].
+
   const SearchInput({
     required this.controller,
     this.hintText = 'Where to?',
@@ -15,24 +14,16 @@ class SearchInput extends StatelessWidget {
     super.key,
   });
 
-  /// Controls the text being edited.
   final TextEditingController controller;
 
-  /// Placeholder text shown when the field is empty.
   final String hintText;
 
-  /// Called when the user types into the field.
   final ValueChanged<String>? onChanged;
 
-  /// Called when the user submits the search (e.g. presses Enter).
   final ValueChanged<String>? onSubmitted;
 
-  /// Called when the user taps the map icon on the right.
-  ///
-  /// Typically opens a full-screen map picker.
   final VoidCallback? onMapTap;
 
-  /// An optional focus node for the text field.
   final FocusNode? focusNode;
 
   @override

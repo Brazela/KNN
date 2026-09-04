@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../utils/constants.dart';
 
-/// A compact shortcut chip used on the homepage for quick actions.
 class ShortcutChip extends StatelessWidget {
-  /// Creates a [ShortcutChip].
+
   const ShortcutChip({
     required this.icon,
     required this.label,

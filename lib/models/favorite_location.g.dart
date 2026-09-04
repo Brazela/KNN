@@ -1,10 +1,5 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'favorite_location.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 FavoriteLocation _$FavoriteLocationFromJson(Map<String, dynamic> json) =>
     FavoriteLocation(

@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../utils/constants.dart';
 
-
 class SettingsDropdownTile<T> extends StatelessWidget {
-  /// Creates a [SettingsDropdownTile].
+
   const SettingsDropdownTile({
     required this.icon,
     required this.label,
@@ -15,22 +14,16 @@ class SettingsDropdownTile<T> extends StatelessWidget {
     super.key,
   });
 
-  /// Icon shown at the start of the row.
   final IconData icon;
 
-  /// Row label, e.g. "Default Mode".
   final String label;
 
-  /// Currently selected option.
   final T value;
 
-  /// All selectable options.
   final List<T> options;
 
-  /// Maps an option to the text shown in the dropdown.
   final String Function(T option) optionLabel;
 
-  /// Called when the user picks a different option.
   final ValueChanged<T> onChanged;
 
   @override

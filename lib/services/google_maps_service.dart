@@ -8,19 +8,12 @@ import 'package:http/http.dart' as http;
 import '../models/models.dart';
 import '../utils/constants.dart';
 
-
 class GoogleMapsService {
-  /// Creates a [GoogleMapsService].
-  ///
-  /// An optional [http.Client] can be injected for testing.
+
   GoogleMapsService({http.Client? client}) : _client = client ?? http.Client();
 
   final http.Client _client;
 
-  /// Returns a Material icon for a list of Google Places [types].
-  ///
-  /// Used by [PopularPlacesWidget] to display a category icon for each
-  /// nearby place card.
   static IconData categoryIcon(List<String> types) {
     for (final t in types) {
       if (t == 'restaurant' || t == 'meal_takeaway' || t == 'meal_delivery') {
@@ -52,17 +45,10 @@ class GoogleMapsService {
     return Icons.place_rounded;
   }
 
-  /// Builds a URI for Google Maps REST API calls using [Uri.https].
-  ///
-  /// Properly encodes all query parameters and avoids encoding issues
-  /// that can occur with [Uri.parse] + [Uri.replace].
   Uri _buildUri(String host, String path, Map<String, String> params) {
     return Uri.https(host, path, params);
   }
 
-  /// Returns autocomplete suggestions via REST API (fallback).
-  ///
-  /// Prefer using [NativePlacesService.autocomplete] on Android.
   @Deprecated('Use NativePlacesService instead')
   Future<List<PlaceSuggestion>> autocomplete(
     String query, {
@@ -105,10 +91,6 @@ class GoogleMapsService {
         .toList();
   }
 
-  /// Fetches detailed location information for a given [placeId].
-  ///
-  /// Uses the new Places API (`GET /v1/places/{placeId}`).
-  /// Throws an exception if the request fails.
   Future<PlaceDetail> getPlaceDetails(String placeId) async {
     final uri = Uri.https(
       'places.googleapis.com',
@@ -148,11 +130,6 @@ class GoogleMapsService {
     }
   }
 
-  /// Fetches driving distance and duration between two coordinates.
-  ///
-  /// [origin] and [destination] should be `Location` models.
-  /// Returns a [DistanceMatrix] result.
-  /// Throws an exception if the request fails or no route is found.
   Future<DistanceMatrix> getDistanceMatrix(
     Location origin,
     Location destination,
@@ -215,14 +192,6 @@ class GoogleMapsService {
     }
   }
 
-  /// Searches for nearby places using the **new** Google Places API.
-  ///
-  /// Uses `POST /v1/places:searchNearby` with the API key in the header.
-  /// [latitude] and [longitude] define the search center. [radius] is in
-  /// metres (default 1500). [type] filters by place type (default
-  /// `'restaurant'`). [keyword] is an optional text search term.
-  ///
-  /// Returns an empty list if no results; throws on error.
   Future<List<NearbyPlace>> nearbySearch({
     required double latitude,
     required double longitude,
@@ -278,7 +247,6 @@ class GoogleMapsService {
         final displayName = map['displayName'] as Map<String, dynamic>?;
         final loc = map['location'] as Map<String, dynamic>?;
 
-        // Extract photo URLs.
         final photosList = map['photos'] as List<dynamic>? ?? [];
         final photoUrls = photosList.take(3).map((photo) {
           final photoMap = photo as Map<String, dynamic>;
@@ -286,7 +254,6 @@ class GoogleMapsService {
           return NearbyPlace.buildPhotoUrl(name, maxWidth: 400);
         }).toList();
 
-        // Extract opening hours.
         final currentHours =
             map['currentOpeningHours'] as Map<String, dynamic>?;
         final regularHours =
@@ -322,13 +289,6 @@ class GoogleMapsService {
     }
   }
 
-  /// Searches for parking lots near a given location.
-  ///
-  /// Convenience wrapper around [nearbySearch] with `type: 'parking'`.
-  /// [latitude] and [longitude] define the search center. [radius] is in
-  /// metres (default 1500). [keyword] optionally narrows results.
-  ///
-  /// Returns an empty list if no parking found; throws on error.
   Future<List<NearbyPlace>> searchParkingNearby({
     required double latitude,
     required double longitude,
@@ -344,13 +304,6 @@ class GoogleMapsService {
     );
   }
 
-  /// Fetches turn-by-turn directions and a route polyline between two points.
-  ///
-  /// Uses the classic Google Directions API. [mode] can be `'driving'` or
-  /// `'transit'`. Returns decoded polyline points, step instructions, and
-  /// total distance/duration.
-  ///
-  /// Throws an exception if the request fails or no route is found.
   Future<DirectionsResult> getDirections(
     Location origin,
     Location destination, {
@@ -366,14 +319,6 @@ class GoogleMapsService {
     return result;
   }
 
-  /// Fetches a combined route: a driving "get to your start" leg from
-  /// [currentLocation] to [fromLocation], followed by the main [mode] route
-  /// from [fromLocation] to [destination].
-  ///
-  /// Used when the user's chosen from-location differs from their real
-  /// current position and the main mode is transit — the Directions API
-  /// does not support waypoints in transit mode, so the two legs are
-  /// fetched separately and merged into a single [DirectionsResult].
   Future<DirectionsResult> getDirectionsWithPrelude(
     Location currentLocation,
     Location fromLocation,
@@ -399,13 +344,6 @@ class GoogleMapsService {
     );
   }
 
-  /// Fetches a transit route that always starts by driving from the user's
-  /// current location to the nearest station (the departure stop of the
-  /// transit plan), then continues by transit to the destination.
-  ///
-  /// The transit plan is computed from [fromLocation] → [destination] to
-  /// determine the departure station; the redundant walk-to-station steps
-  /// before the first transit step are dropped since the user drives there.
   Future<({DirectionsResult result, int preludePointCount, String stationName})>
       getTransitWithStationPrelude(
     Location currentLocation,
@@ -431,14 +369,12 @@ class GoogleMapsService {
       return (result: transit, preludePointCount: 0, stationName: stationName);
     }
 
-    // Driving prelude from the current location to the departure station.
     final prelude = await getDirections(
       currentLocation,
       Location(latitude: station.latitude, longitude: station.longitude),
       mode: 'driving',
     );
 
-    // Drop the walk-to-station steps; transit continues from the station.
     final transitSteps = transit.steps.sublist(firstTransitIndex);
     final transitStepInfos = transit.stepInfos.sublist(firstTransitIndex);
 
@@ -455,14 +391,6 @@ class GoogleMapsService {
     );
   }
 
-  /// Fetches multiple transit route alternatives between two points.
-  ///
-  /// Uses the Google Directions API in transit mode with `alternatives=true`
-  /// to get up to 3 route options. Each result includes full step-level
-  /// data: walking segments, transit line info, departure/arrival stops.
-  ///
-  /// This is the primary transit routing method — it handles walking to/from
-  /// stations, transfers, and correct line names automatically.
   Future<List<DirectionsResult>> getTransitRoutes(
     Location origin,
     Location destination,
@@ -476,7 +404,6 @@ class GoogleMapsService {
     return (result as List<dynamic>).cast<DirectionsResult>();
   }
 
-  /// Internal: fetches directions from the API and parses all route data.
   Future<dynamic> _fetchDirectionsRaw(
     Location origin,
     Location destination, {
@@ -540,7 +467,6 @@ class GoogleMapsService {
     }
   }
 
-  /// Parses a single route from the Directions API response.
   DirectionsResult _parseRoute(Map<String, dynamic> route) {
     final overviewPolyline =
         route['overview_polyline'] as Map<String, dynamic>?;
@@ -553,10 +479,6 @@ class GoogleMapsService {
     var distanceMeters = 0;
     var durationSeconds = 0;
 
-    // A route may contain multiple legs when waypoints are used (e.g.
-    // current location → from-location → destination). Aggregate steps,
-    // distance, and duration across every leg so the result reflects the
-    // whole journey.
     for (final legJson in legs) {
       final leg = legJson as Map<String, dynamic>;
       final distance = leg['distance'] as Map<String, dynamic>?;
@@ -575,7 +497,6 @@ class GoogleMapsService {
         final distText = stepDistance?['text'] as String? ?? '';
         steps.add('$instruction${distText.isNotEmpty ? ' ($distText)' : ''}');
 
-        // Parse step start/end coordinates.
         LatLng? startLatLng;
         LatLng? endLatLng;
         final startLoc = step['start_location'] as Map<String, dynamic>?;
@@ -593,7 +514,6 @@ class GoogleMapsService {
           );
         }
 
-        // Parse transit-specific details.
         TransitStepInfo? transitInfo;
         if (travelMode == 'TRANSIT') {
           final td = step['transit_details'] as Map<String, dynamic>?;
@@ -630,7 +550,6 @@ class GoogleMapsService {
       }
     }
 
-    // Decode polyline into LatLng list.
     final decoded = PolylinePoints().decodePolyline(polylinePoints);
     final latLngs = decoded
         .map((p) => LatLng(p.latitude, p.longitude))
@@ -645,14 +564,12 @@ class GoogleMapsService {
     );
   }
 
-  /// Extracts the first agency name from a list of transit agencies.
   String? _extractAgencyName(List<dynamic>? agencies) {
     if (agencies == null || agencies.isEmpty) return null;
     final first = agencies.first as Map<String, dynamic>?;
     return first?['name'] as String?;
   }
 
-  /// Strips HTML tags from a string.
   String _stripHtml(String htmlText) {
     return htmlText
         .replaceAll(RegExp(r'<[^>]*>'), ' ')
@@ -661,9 +578,8 @@ class GoogleMapsService {
   }
 }
 
-/// Result of a Google Directions API call.
 class DirectionsResult {
-  /// Creates a [DirectionsResult].
+
   const DirectionsResult({
     required this.polylinePoints,
     required this.steps,
@@ -672,27 +588,19 @@ class DirectionsResult {
     required this.durationSeconds,
   });
 
-  /// Decoded polyline points for drawing the route on a map.
   final List<LatLng> polylinePoints;
 
-  /// Human-readable turn-by-turn instructions (HTML stripped).
   final List<String> steps;
 
-  /// Rich step-level data with transit details when available.
-  ///
-  /// Parallels [steps] — index `i` in both lists refers to the same step.
   final List<DirectionsStepInfo> stepInfos;
 
-  /// Total distance in meters.
   final int distanceMeters;
 
-  /// Total duration in seconds.
   final int durationSeconds;
 }
 
-/// A single step in a Directions API route.
 class DirectionsStepInfo {
-  /// Creates a [DirectionsStepInfo].
+
   const DirectionsStepInfo({
     required this.instruction,
     required this.distanceMeters,
@@ -703,31 +611,23 @@ class DirectionsStepInfo {
     this.endLatLng,
   });
 
-  /// Clean (HTML-stripped) instruction text.
   final String instruction;
 
-  /// Distance of this step in meters.
   final int distanceMeters;
 
-  /// Duration of this step in seconds.
   final int durationSeconds;
 
-  /// Travel mode: `'WALKING'` or `'TRANSIT'`.
   final String travelMode;
 
-  /// Transit line and stop details, non-null only when [travelMode] is `'TRANSIT'`.
   final TransitStepInfo? transitInfo;
 
-  /// Coordinates where this step starts, if available.
   final LatLng? startLatLng;
 
-  /// Coordinates where this step ends, if available.
   final LatLng? endLatLng;
 }
 
-/// Transit-specific details for a transit step in a Directions API route.
 class TransitStepInfo {
-  /// Creates a [TransitStepInfo].
+
   const TransitStepInfo({
     required this.lineName,
     this.lineFullName,
@@ -741,33 +641,23 @@ class TransitStepInfo {
     this.agencyName,
   });
 
-  /// Short name of the transit line (e.g. "Seremban Line" or "KJ").
   final String lineName;
 
-  /// Full name of the transit line.
   final String? lineFullName;
 
-  /// Hex color of the transit line (e.g. "FF0000" for red).
   final String? lineColor;
 
-  /// Vehicle type: `'BUS'`, `'SUBWAY'`, `'TRAIN'`, `'TRAM'`, `'RAIL'`, etc.
   final String vehicleType;
 
-  /// Human-readable vehicle name (e.g. "Train" or "Bus").
   final String vehicleName;
 
-  /// Name of the departure stop/station.
   final String departureStop;
 
-  /// Name of the arrival stop/station.
   final String arrivalStop;
 
-  /// Number of intermediate stops on this leg.
   final int numStops;
 
-  /// Seconds between vehicles (headway), if available.
   final int? headwaySeconds;
 
-  /// Transit agency name (e.g. "KTM" or "RapidKL").
   final String? agencyName;
 }

@@ -1,10 +1,5 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'route.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 TransitRoute _$TransitRouteFromJson(Map<String, dynamic> json) => TransitRoute(
   id: json['id'] as String,

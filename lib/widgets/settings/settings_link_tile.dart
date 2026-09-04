@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../utils/constants.dart';
 
-
 class SettingsLinkTile extends StatelessWidget {
-  /// Creates a [SettingsLinkTile].
+
   const SettingsLinkTile({
     required this.icon,
     required this.label,
@@ -12,13 +11,10 @@ class SettingsLinkTile extends StatelessWidget {
     super.key,
   });
 
-  /// Icon shown at the start of the row.
   final IconData icon;
 
-  /// Row label, e.g. "Privacy Policy".
   final String label;
 
-  /// Called when the row is tapped.
   final VoidCallback onTap;
 
   @override

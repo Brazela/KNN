@@ -1,10 +1,5 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'fuel_price.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 FuelPrice _$FuelPriceFromJson(Map<String, dynamic> json) => FuelPrice(
   date: json['date'] as String,

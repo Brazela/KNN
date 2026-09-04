@@ -6,20 +6,12 @@ import '../models/models.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 
-
 class WeatherService {
-  /// Creates a [WeatherService].
-  ///
-  /// An optional [http.Client] can be injected for testing.
+
   WeatherService({http.Client? client}) : _client = client ?? http.Client();
 
   final http.Client _client;
 
-  /// Hardcoded lookup of major Malaysian district coordinates.
-  ///
-  /// The data.gov.my forecast API returns forecasts by district name without
-  /// coordinates, so we use this map to match the nearest district to a given
-  /// lat/lng. Expand this map to improve coverage.
   static const Map<String, List<double>> _districtCoordinates = {
     'Kuala Lumpur': [3.139, 101.6869],
     'Petaling Jaya': [3.1073, 101.6067],
@@ -49,14 +41,6 @@ class WeatherService {
     'Sibu': [2.2873, 111.8307],
   };
 
-  /// Fetches the 7-day weather forecast for the district nearest to the given
-  /// coordinates.
-  ///
-  /// The API returns forecasts for all districts; this method matches the
-  /// closest district using [_districtCoordinates].
-  ///
-  /// Returns a list of [Weather] forecasts starting from today.
-  /// Throws an exception if the request fails.
   Future<List<Weather>> getForecast(double latitude, double longitude) async {
     final response = await _client.get(Uri.parse(ApiUrls.weatherForecastUrl));
 
@@ -80,7 +64,6 @@ class WeatherService {
         .toList();
   }
 
-  /// Finds the nearest known district name to the given coordinates.
   String _findNearestDistrict(double latitude, double longitude) {
     String? nearest;
     var bestDistance = double.infinity;
@@ -102,10 +85,6 @@ class WeatherService {
     return nearest ?? 'Kuala Lumpur';
   }
 
-  /// Fetches earthquake warnings/reports from data.gov.my.
-  ///
-  /// Returns a list of [EarthquakeWarning].
-  /// Throws an exception if the request fails.
   Future<List<EarthquakeWarning>> getEarthquakeWarnings() async {
     final response =
         await _client.get(Uri.parse(ApiUrls.earthquakeWarningUrl));

@@ -1,10 +1,5 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'gtfs_feed.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 GTFSScheduleRoute _$GTFSScheduleRouteFromJson(Map<String, dynamic> json) =>
     GTFSScheduleRoute(

@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../utils/constants.dart';
 
-
 class SettingsTextFieldTile extends StatelessWidget {
-  /// Creates a [SettingsTextFieldTile].
+
   const SettingsTextFieldTile({
     required this.icon,
     required this.label,
@@ -17,29 +16,20 @@ class SettingsTextFieldTile extends StatelessWidget {
     super.key,
   });
 
-  /// Icon shown beside [label].
   final IconData icon;
 
-  /// Row label, e.g. "Home Address".
   final String label;
 
-  /// Controls the text being edited.
   final TextEditingController controller;
 
-  /// Placeholder text shown when the field is empty.
   final String? hintText;
 
-  /// Keyboard type, e.g. [TextInputType.number] for numeric fields.
   final TextInputType? keyboardType;
 
-  /// Validates the field's value; returns an error string, or `null` when
-  /// valid.
   final String? Function(String? value)? validator;
 
-  /// Optional unit shown after the input, e.g. "L/km".
   final String? suffixText;
 
-  /// Called as the user edits the field.
   final ValueChanged<String>? onChanged;
 
   @override

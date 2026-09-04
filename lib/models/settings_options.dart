@@ -5,10 +5,8 @@ enum DefaultTravelMode {
 
   const DefaultTravelMode(this.displayName);
 
-  
   final String displayName;
 }
-
 
 enum FuelType {
   ron95('RON95'),
@@ -17,6 +15,5 @@ enum FuelType {
 
   const FuelType(this.displayName);
 
-  
   final String displayName;
 }

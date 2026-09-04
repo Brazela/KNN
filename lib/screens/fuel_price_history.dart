@@ -173,7 +173,7 @@ class _FuelPriceHistoryPageState extends State<FuelPriceHistoryPage> {
   }
 
   LineChartData _buildChartData() {
-    // Use the most recent 20 records.
+
     final data = _history.take(20).toList().reversed.toList();
 
     return LineChartData(
@@ -230,9 +230,9 @@ class _FuelPriceHistoryPageState extends State<FuelPriceHistoryPage> {
         ),
       ),
       lineBarsData: [
-        _buildLineSeries(data, 'ron95', const Color(0xFFD97706)),   // amber
-        _buildLineSeries(data, 'ron97', const Color(0xFF059669)),   // green
-        _buildLineSeries(data, 'diesel', const Color(0xFF1D4ED8)),  // blue
+        _buildLineSeries(data, 'ron95', const Color(0xFFD97706)),
+        _buildLineSeries(data, 'ron97', const Color(0xFF059669)),
+        _buildLineSeries(data, 'diesel', const Color(0xFF1D4ED8)),
       ],
       minY: _computeMinPrice() - 0.3,
       maxY: _computeMaxPrice() + 0.3,
@@ -602,11 +602,11 @@ class _ChangeIndicator extends StatelessWidget {
 
     if (change > 0.005) {
       icon = Icons.arrow_upward_rounded;
-      color = const Color(0xFFDC2626); // red
+      color = const Color(0xFFDC2626);
       text = '+RM ${change.toStringAsFixed(2)}';
     } else if (change < -0.005) {
       icon = Icons.arrow_downward_rounded;
-      color = const Color(0xFF059669); // green
+      color = const Color(0xFF059669);
       text = '-RM ${(-change).toStringAsFixed(2)}';
     } else {
       icon = Icons.remove_rounded;

@@ -7,10 +7,8 @@ import '../services/services.dart';
 import '../utils/helpers.dart';
 import 'cost_comparison_card.dart';
 
-/// Shows today's total driving vs transit cost and the money saved,
-/// computed from real trip history.
 class TodayCostCard extends StatefulWidget {
-  /// Creates a [TodayCostCard].
+
   const TodayCostCard({super.key});
 
   @override
@@ -27,7 +25,7 @@ class _TodayCostCardState extends State<TodayCostCard> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Re-fetch whenever trip history changes (new trips recorded).
+
     context.watch<TripProvider>();
     _loadToday();
   }
@@ -42,20 +40,14 @@ class _TodayCostCardState extends State<TodayCostCard> {
       var driving = 0.0;
       var transit = 0.0;
       var savings = 0.0;
-      var hasSavings = false;
       for (final trip in trips) {
-        final dCost = trip.drivingCost ??
-            (trip.mode == TravelMode.driving ? trip.cost : null);
-        final tCost = trip.transitCost ??
-            (trip.mode == TravelMode.transit ? trip.cost : null);
-        if (dCost != null) driving += dCost;
-        if (tCost != null) transit += tCost;
-        if (trip.savingsCost != null) {
-          savings += trip.savingsCost!;
-          hasSavings = true;
+        if (trip.mode == TravelMode.driving) {
+          driving += trip.cost;
+        } else {
+          transit += trip.cost;
         }
+        savings += trip.savingsCost ?? 0;
       }
-      if (!hasSavings) savings = driving - transit;
 
       setState(() {
         _drivingTotal = driving;

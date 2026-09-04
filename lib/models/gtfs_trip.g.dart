@@ -1,10 +1,5 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'gtfs_trip.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 GTFSTrip _$GTFSTripFromJson(Map<String, dynamic> json) => GTFSTrip(
   tripId: json['trip_id'] as String,

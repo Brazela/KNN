@@ -3,9 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-
 final Map<String, BitmapDescriptor> _markerCache = {};
-
 
 Future<BitmapDescriptor> getNumberedMarker(
   int number, {
@@ -13,7 +11,7 @@ Future<BitmapDescriptor> getNumberedMarker(
   Color backgroundColor = const Color(0xFF1A2CC8),
   Color textColor = Colors.white,
 }) async {
-  // Check cache (keyed by number + size so resizing re-renders).
+
   final key = '$number-$size';
   if (_markerCache.containsKey(key)) return _markerCache[key]!;
 
@@ -23,11 +21,9 @@ Future<BitmapDescriptor> getNumberedMarker(
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
 
-  // Scale factor for high-DPI rendering.
   final scale = devicePixelRatio;
   final sizeScale = size / 44;
 
-  // Outer white border circle.
   final borderPaint = Paint()
     ..color = Colors.white
     ..style = PaintingStyle.fill;
@@ -37,7 +33,6 @@ Future<BitmapDescriptor> getNumberedMarker(
     borderPaint,
   );
 
-  // Inner colored circle.
   final innerPaint = Paint()
     ..color = backgroundColor
     ..style = PaintingStyle.fill;
@@ -47,7 +42,6 @@ Future<BitmapDescriptor> getNumberedMarker(
     innerPaint,
   );
 
-  // Number text.
   final textPainter = TextPainter(
     text: TextSpan(
       text: '$number',
@@ -83,9 +77,7 @@ Future<BitmapDescriptor> getNumberedMarker(
   return descriptor;
 }
 
-/// Cache of generated vehicle-type marker bitmaps.
 final Map<String, BitmapDescriptor> _vehicleMarkerCache = {};
-
 
 Future<BitmapDescriptor> getVehicleMarker(
   String vehicleType, {
@@ -106,7 +98,6 @@ Future<BitmapDescriptor> getVehicleMarker(
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
 
-  // Pick icon and color based on vehicle type.
   IconData iconData;
   Color bgColor;
   final baseType = vehicleType.toUpperCase();
@@ -141,12 +132,10 @@ Future<BitmapDescriptor> getVehicleMarker(
       bgColor = const Color(0xFF1A2CC8);
   }
 
-  // Override to red when highlighting the nearest vehicle.
   if (highlightColor) {
     bgColor = const Color(0xFFD32F2F);
   }
 
-  // White border circle.
   final borderPaint = Paint()
     ..color = Colors.white
     ..style = PaintingStyle.fill;
@@ -156,7 +145,6 @@ Future<BitmapDescriptor> getVehicleMarker(
     borderPaint,
   );
 
-  // Colored inner circle.
   final innerPaint = Paint()
     ..color = bgColor
     ..style = PaintingStyle.fill;
@@ -166,7 +154,6 @@ Future<BitmapDescriptor> getVehicleMarker(
     innerPaint,
   );
 
-  // Icon.
   final textPainter = TextPainter(
     text: TextSpan(
       text: String.fromCharCode(iconData.codePoint),

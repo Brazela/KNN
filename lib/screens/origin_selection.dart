@@ -12,12 +12,8 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/widgets.dart';
 
-/// Full-screen overlay page for selecting the trip origin.
-///
-/// Mirrors the Search Destination layout but adds "📍 Current Location" as
-/// the first option, plus Home / Work / Recent quick-access chips.
 class OriginSelectionPage extends StatefulWidget {
-  /// Creates an [OriginSelectionPage].
+
   const OriginSelectionPage({super.key});
 
   @override
@@ -35,7 +31,6 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
   bool _showMapPicker = false;
   Timer? _debounce;
 
-  // Map-picker state.
   GoogleMapController? _mapController;
   LatLng _pickerCenter = const LatLng(3.139, 101.6869);
 
@@ -47,8 +42,6 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
     _mapController?.dispose();
     super.dispose();
   }
-
-  // --- Autocomplete ---
 
   void _onSearchChanged(String query) {
     _debounce?.cancel();
@@ -116,8 +109,6 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
     }
   }
 
-  // --- Current Location ---
-
   Future<void> _selectCurrentLocation() async {
     try {
       setState(() => _loading = true);
@@ -141,8 +132,6 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
     }
   }
 
-  // --- Saved places ---
-
   void _selectSavedPlace(Location location, String label) {
     setState(() {
       _selectedOrigin = location;
@@ -153,8 +142,6 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
     });
     _searchFocus.unfocus();
   }
-
-  // --- Confirm ---
 
   void _confirm() {
     if (_selectedOrigin == null) return;
@@ -177,8 +164,6 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
     tripProvider.setOrigin(_selectedOrigin!);
     Navigator.of(context).pushNamed(AppRoutes.comparison);
   }
-
-  // --- Map picker ---
 
   void _openMapPicker() {
     setState(() {
@@ -233,11 +218,9 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
     });
   }
 
-  // --- Build ---
-
   @override
   Widget build(BuildContext context) {
-    // Full-screen map picker mode.
+
     if (_showMapPicker) {
       return _buildMapPicker();
     }
@@ -247,7 +230,7 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header: back button + search input.
+
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
               child: Row(
@@ -284,7 +267,6 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
 
             const SizedBox(height: 4),
 
-            // Body: quick chips, suggestions, or selected preview.
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
@@ -298,16 +280,14 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
     );
   }
 
-  /// Saved places + autocomplete suggestions.
   Widget _buildSelectionBody() {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Saved places (Home/Work).
+
           SavedPlacesSection(onSelect: _selectSavedPlace),
 
-          // "Current Location" as first suggestion item.
           ListTile(
             onTap: _selectCurrentLocation,
             contentPadding:
@@ -343,7 +323,6 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
           ),
           const Divider(height: 1),
 
-          // Autocomplete suggestions.
           if (_suggestions.isEmpty && _searchController.text.isNotEmpty)
             const Padding(
               padding: EdgeInsets.all(24),
@@ -362,7 +341,6 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
               ),
             ),
 
-          // Empty state hint.
           if (_suggestions.isEmpty && _searchController.text.isEmpty)
             const Padding(
               padding: EdgeInsets.all(32),
@@ -381,12 +359,11 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
     );
   }
 
-  /// Preview with an expanded map stretching down to the confirm button area.
   Widget _buildPlacePreview() {
     final origin = _selectedOrigin!;
     return Column(
       children: [
-        // Full-height map — fills the space above the bottom section.
+
         Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
@@ -406,7 +383,7 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
           ),
         ),
         const SizedBox(height: 12),
-        // Origin label.
+
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
@@ -446,7 +423,7 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
           ),
         ),
         const SizedBox(height: 12),
-        // Confirm button.
+
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           child: SizedBox(
@@ -476,14 +453,13 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
     );
   }
 
-  /// Map picker with a fixed bottom bar (map does not cover the confirm button).
   Widget _buildMapPicker() {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     return Scaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Map section — fills everything above the bottom bar.
+
           Expanded(
             child: Stack(
               children: [
@@ -562,7 +538,6 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
             ),
           ),
 
-          // Fixed bottom bar with the confirm button (consistent with place preview).
           Container(
             padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomPadding),
             decoration: BoxDecoration(
@@ -604,7 +579,6 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
   }
 }
 
-/// An individual autocomplete suggestion tile.
 class _SuggestionTile extends StatelessWidget {
   const _SuggestionTile({required this.suggestion, this.onTap});
 

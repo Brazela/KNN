@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../utils/constants.dart';
 
-
 class TopBar extends StatelessWidget {
-  
+
   const TopBar({
     this.onFavoritesTap,
     this.onNearbyServicesTap,
@@ -12,13 +11,10 @@ class TopBar extends StatelessWidget {
     super.key,
   });
 
-  
   final VoidCallback? onFavoritesTap;
 
-  
   final VoidCallback? onNearbyServicesTap;
 
-  
   final VoidCallback? onNotificationTap;
 
   @override
@@ -54,15 +50,12 @@ class TopBar extends StatelessWidget {
   }
 }
 
-
 class _IconButton extends StatelessWidget {
-  
+
   const _IconButton({required this.icon, this.onTap});
 
-  
   final IconData icon;
 
-  
   final VoidCallback? onTap;
 
   @override

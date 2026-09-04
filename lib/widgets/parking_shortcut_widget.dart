@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 import '../navigation/navigation.dart';
 import '../utils/constants.dart';
 
-
 class ParkingShortcutWidget extends StatelessWidget {
-  /// Creates a [ParkingShortcutWidget].
+
   const ParkingShortcutWidget({super.key});
 
   @override
@@ -30,7 +29,7 @@ class ParkingShortcutWidget extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Icon.
+
             Container(
               width: 44,
               height: 44,
@@ -43,7 +42,7 @@ class ParkingShortcutWidget extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 14),
-            // Text content.
+
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,7 +67,7 @@ class ParkingShortcutWidget extends StatelessWidget {
                 ],
               ),
             ),
-            // Arrow.
+
             Container(
               width: 32,
               height: 32,

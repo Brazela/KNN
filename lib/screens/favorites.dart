@@ -9,9 +9,8 @@ import '../utils/constants.dart';
 import '../widgets/widgets.dart';
 import 'search_destination.dart';
 
-
 class FavoritesPage extends StatefulWidget {
-  
+
   const FavoritesPage({super.key});
 
   @override
@@ -30,7 +29,6 @@ class _FavoritesPageState extends State<FavoritesPage> {
     _loadData();
   }
 
-  
   Future<void> _loadData() async {
     final storedRoutes = await _storage.loadSavedRoutes();
     if (!mounted) return;
@@ -44,8 +42,6 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
     if (storedRoutes != null) await _storage.saveSavedRoutes(_savedRoutes);
   }
-
-  
 
   Future<void> _editSavedRoute(SavedRoute route) async {
     final action = await showModalBottomSheet<String>(
@@ -171,10 +167,6 @@ class _FavoritesPageState extends State<FavoritesPage> {
     }
   }
 
-  
-  
-  
-  
   void _planRoute(SavedRoute route) {
     final tripProvider = context.read<TripProvider>();
     tripProvider.setOrigin(route.origin);
@@ -293,10 +285,6 @@ class _FavoritesPageState extends State<FavoritesPage> {
   }
 }
 
-
-
-
-
 Future<Location?> _pickLocation(
   BuildContext context, {
   Location? initial,
@@ -316,7 +304,6 @@ Future<Location?> _pickLocation(
   );
   return picked;
 }
-
 
 Future<bool?> _showConfirmDialog(
   BuildContext context, {
@@ -349,9 +336,6 @@ Future<bool?> _showConfirmDialog(
   );
 }
 
-
-
-
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
 
@@ -370,7 +354,6 @@ class _SectionLabel extends StatelessWidget {
     );
   }
 }
-
 
 class _EmptyState extends StatelessWidget {
   const _EmptyState({required this.icon, required this.message});
@@ -402,7 +385,6 @@ class _EmptyState extends StatelessWidget {
     );
   }
 }
-
 
 class _HomeWorkCard extends StatelessWidget {
   const _HomeWorkCard({

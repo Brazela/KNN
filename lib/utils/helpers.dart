@@ -4,9 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../models/models.dart';
 
-/// Earth radius in kilometres used by the Haversine formula.
 const double _earthRadiusKm = 6371.0;
-
 
 bool isSameLocation(Location a, Location b) {
   if (a.placeId != null &&
@@ -24,7 +22,6 @@ bool isSameLocation(Location a, Location b) {
   return latA == latB && lngA == lngB;
 }
 
-
 bool isInMalaysia(Location location) {
   final address = location.address;
   if (address != null && address.trim().isNotEmpty) {
@@ -38,10 +35,6 @@ bool isInMalaysia(Location location) {
   return inPeninsular || inEastMalaysia;
 }
 
-/// Calculates the great-circle distance between two coordinates using the
-/// Haversine formula.
-///
-/// Returns the distance in kilometres.
 double calculateDistance(
   double lat1,
   double lng1,
@@ -61,15 +54,8 @@ double calculateDistance(
   return _earthRadiusKm * c;
 }
 
-/// Converts degrees to radians.
 double _degreesToRadians(double degrees) => degrees * pi / 180;
 
-/// Formats a duration given in minutes into a human-readable string.
-///
-/// Examples:
-/// - 45  -> "45m"
-/// - 90  -> "1h 30m"
-/// - 150 -> "2h 30m"
 String formatDuration(int minutes) {
   if (minutes < 0) minutes = 0;
 
@@ -81,9 +67,6 @@ String formatDuration(int minutes) {
   return '${hours}h ${remainingMinutes}m';
 }
 
-/// Formats an amount in Malaysian Ringgit.
-///
-/// Example: 15.5 -> "RM 15.50"
 String formatCurrency(double amount) {
   final formatter = NumberFormat.currency(
     locale: 'ms_MY',
@@ -93,13 +76,9 @@ String formatCurrency(double amount) {
   return formatter.format(amount);
 }
 
-/// Formats a [DateTime] into a readable date/time string.
-///
-/// Example: 10 Jul 2026, 14:30
 String formatDateTime(DateTime dateTime) {
   return DateFormat('d MMM yyyy, HH:mm').format(dateTime);
 }
-
 
 Duration parseGTFSTime(String time) {
   final parts = time.split(':');
@@ -112,7 +91,6 @@ Duration parseGTFSTime(String time) {
   return Duration(hours: hours, minutes: minutes, seconds: seconds);
 }
 
-/// Calculates the initial bearing (degrees, 0–360) from point A to point B.
 double bearingBetween(double lat1, double lng1, double lat2, double lng2) {
   final dLng = _degreesToRadians(lng2 - lng1);
   final y = sin(dLng) * cos(_degreesToRadians(lat2));

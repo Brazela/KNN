@@ -1,21 +1,17 @@
 import 'settings_options.dart';
 
-
 class CarModel {
-  
+
   const CarModel({
     required this.name,
     this.fuelType,
     this.consumptionKmPerL,
   });
 
-  
   final String name;
 
-  
   final FuelType? fuelType;
 
-  
   final double? consumptionKmPerL;
 
   bool get isCustom => fuelType == null;
@@ -24,7 +20,7 @@ class CarModel {
 
   static const List<CarModel> predefinedCars = [
     custom,
-    
+
     CarModel(
       name: 'Perodua Axia',
       fuelType: FuelType.ron95,
@@ -65,7 +61,7 @@ class CarModel {
       fuelType: FuelType.ron95,
       consumptionKmPerL: 16.0,
     ),
-    
+
     CarModel(
       name: 'Honda Civic Type R',
       fuelType: FuelType.ron97,
@@ -81,7 +77,7 @@ class CarModel {
       fuelType: FuelType.ron97,
       consumptionKmPerL: 11.0,
     ),
-    
+
     CarModel(
       name: 'Toyota Hilux',
       fuelType: FuelType.diesel,

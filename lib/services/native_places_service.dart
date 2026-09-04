@@ -5,24 +5,17 @@ import 'package:http/http.dart' as http;
 import '../models/models.dart';
 import '../utils/constants.dart';
 
-
 class NativePlacesService {
   final http.Client _client;
 
-  /// Creates a [NativePlacesService].
-  ///
-  /// An optional [http.Client] can be injected for testing.
   NativePlacesService({http.Client? client}) : _client = client ?? http.Client();
 
-  /// Returns autocomplete predictions using the new Places API.
-  ///
-  /// [query] must be at least 2 characters.
   Future<List<PlaceSuggestion>> autocomplete(String query) async {
     if (query.trim().length < 2) return [];
 
     final body = <String, dynamic>{
       'input': query,
-      // Bias results towards Malaysia (max radius is 50 000 m).
+
       'locationBias': {
         'circle': {
           'center': {'latitude': 4.2105, 'longitude': 101.9758},

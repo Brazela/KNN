@@ -7,10 +7,9 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../navigation/navigation.dart';
 import '../providers/providers.dart';
-import '../services/services.dart'; // provides GoogleMapsService, NativePlacesService
+import '../services/services.dart';
 import '../utils/constants.dart';
 import '../widgets/widgets.dart';
-
 
 class SearchDestinationPage extends StatefulWidget {
 
@@ -25,16 +24,12 @@ class SearchDestinationPage extends StatefulWidget {
 
   final NearbyPlace? initialPlace;
 
-
   final Location? initialLocation;
-
 
   final bool openMapPicker;
 
-
   final Future<void> Function(Location location)? onPlacePicked;
 
-  /// Overrides the confirm button label (e.g. "Save as Home").
   final String? confirmLabel;
 
   @override
@@ -51,9 +46,8 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
   bool _showMapPicker = false;
   Timer? _debounce;
 
-  // Map-picker state.
   GoogleMapController? _mapController;
-  LatLng _pickerCenter = const LatLng(3.139, 101.6869); // KL default.
+  LatLng _pickerCenter = const LatLng(3.139, 101.6869);
 
   @override
   void initState() {
@@ -82,16 +76,12 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
       _searchController.text = loc.address ?? 'Saved location';
     }
 
-    // Auto-focus the search field after the first frame so the keyboard
-    // appears without an extra tap (skip if map picker opens directly).
     if (!widget.openMapPicker) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _searchFocus.requestFocus();
       });
     }
 
-    // If the caller wants the map picker open immediately, schedule it
-    // after the build phase so the Scaffold is ready.
     if (widget.openMapPicker) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _openMapPicker();
@@ -107,8 +97,6 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
     _mapController?.dispose();
     super.dispose();
   }
-
-  // --- Autocomplete ---
 
   void _onSearchChanged(String query) {
     _debounce?.cancel();
@@ -173,7 +161,6 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
     }
   }
 
-  /// Selects a saved place (Home/Work) directly, mirroring suggestion select.
   void _selectSavedPlace(Location location, String label) {
     setState(() {
       _selectedPlace = PlaceDetail(
@@ -210,8 +197,6 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
     context.read<TripProvider>().setDestination(location);
     Navigator.of(context).pushNamed(AppRoutes.originSelection);
   }
-
-  // --- Map picker ---
 
   void _openMapPicker() {
     setState(() {
@@ -264,11 +249,9 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
     });
   }
 
-  // --- Build ---
-
   @override
   Widget build(BuildContext context) {
-    // Full-screen map picker mode.
+
     if (_showMapPicker) {
       return _buildMapPicker();
     }
@@ -278,7 +261,7 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header: back button + search input.
+
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
               child: Row(
@@ -315,7 +298,6 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
 
             const SizedBox(height: 4),
 
-            // Body: suggestions list or selected-place preview.
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
@@ -329,10 +311,9 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
     );
   }
 
-  /// Suggestions list from autocomplete.
   Widget _buildSuggestionsList() {
     if (_suggestions.isEmpty) {
-      // Show saved places when the query is empty.
+
       if (_searchController.text.trim().isEmpty) {
         return ListView(
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -378,12 +359,11 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
     );
   }
 
-  /// Preview with an expanded map stretching down to the confirm button area.
   Widget _buildPlacePreview() {
     final place = _selectedPlace!;
     return Column(
       children: [
-        // Full-height map — fills the space above the bottom section.
+
         Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
@@ -403,7 +383,7 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
           ),
         ),
         const SizedBox(height: 12),
-        // Place name and address.
+
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
@@ -443,7 +423,7 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
           ),
         ),
         const SizedBox(height: 12),
-        // Confirm button.
+
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           child: SizedBox(
@@ -473,14 +453,13 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
     );
   }
 
-  /// Map picker with a fixed bottom bar (map does not cover the confirm button).
   Widget _buildMapPicker() {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     return Scaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Map section — fills everything above the bottom bar.
+
           Expanded(
             child: Stack(
               children: [
@@ -495,7 +474,6 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
                   myLocationButtonEnabled: false,
                 ),
 
-                // Centered pin.
                 const Center(
                   child: Icon(
                     Icons.location_on_rounded,
@@ -504,7 +482,6 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
                   ),
                 ),
 
-                // Top bar: back + current location.
                 SafeArea(
                   child: Padding(
                     padding: const EdgeInsets.all(12),
@@ -563,7 +540,6 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
             ),
           ),
 
-          // Fixed bottom bar with the confirm button (consistent with place preview).
           Container(
             padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomPadding),
             decoration: BoxDecoration(
@@ -605,7 +581,6 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
   }
 }
 
-/// An individual autocomplete suggestion tile.
 class _SuggestionTile extends StatelessWidget {
   const _SuggestionTile({required this.suggestion, this.onTap});
 

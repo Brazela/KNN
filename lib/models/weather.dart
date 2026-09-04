@@ -2,10 +2,9 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'weather.g.dart';
 
-
 @JsonSerializable(fieldRename: FieldRename.snake)
 class Weather {
-  
+
   const Weather({
     required this.locationName,
     required this.date,
@@ -18,13 +17,8 @@ class Weather {
     required this.maxTemp,
   });
 
-  
-  
-  
-  
   factory Weather.fromJson(Map<String, dynamic> json) {
-    
-    
+
     final location = json['location'] as Map<String, dynamic>?;
     if (location != null && location['location_name'] != null) {
       json = Map<String, dynamic>.from(json);
@@ -33,41 +27,30 @@ class Weather {
     return _$WeatherFromJson(json);
   }
 
-  
   final String locationName;
 
-  
   final String date;
 
-  
   final String morningForecast;
 
-  
   final String afternoonForecast;
 
-  
   final String nightForecast;
 
-  
   final String summaryForecast;
 
-  
   final String summaryWhen;
 
-  
   final int minTemp;
 
-  
   final int maxTemp;
 
-  
   Map<String, dynamic> toJson() => _$WeatherToJson(this);
 }
 
-
 @JsonSerializable(fieldRename: FieldRename.snake)
 class EarthquakeWarning {
-  
+
   const EarthquakeWarning({
     required this.issued,
     required this.titleEn,
@@ -81,41 +64,29 @@ class EarthquakeWarning {
     this.magnitude,
   });
 
-  
   factory EarthquakeWarning.fromJson(Map<String, dynamic> json) =>
       _$EarthquakeWarningFromJson(json);
 
-  
   final String issued;
 
-  
   final String titleEn;
 
-  
   final String titleBm;
 
-  
   final String headingEn;
 
-  
   final String textEn;
 
-  
   final String headingBm;
 
-  
   final String textBm;
 
-  
   final double? latitude;
 
-  
   final double? longitude;
 
-  
   final double? magnitude;
 
-  
   Map<String, dynamic> toJson() => _$EarthquakeWarningToJson(this);
 }
 

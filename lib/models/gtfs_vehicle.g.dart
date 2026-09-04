@@ -1,10 +1,5 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'gtfs_vehicle.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 GTFSVehicle _$GTFSVehicleFromJson(Map<String, dynamic> json) => GTFSVehicle(
   vehicleId: json['vehicle_id'] as String,

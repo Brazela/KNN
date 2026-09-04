@@ -84,7 +84,6 @@ class TripProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Loads the saved Home and Work places from on-device storage.
   Future<void> initSavedPlaces(SavedPlacesService service) async {
     _savedPlaces = service;
     _home = await service.getHome();

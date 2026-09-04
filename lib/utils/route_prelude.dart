@@ -4,7 +4,6 @@ import '../models/models.dart';
 import '../services/services.dart';
 import 'helpers.dart';
 
-
 ({int fromPolylineIndex, LatLng snappedFromPoint}) computePreludeSplit({
   required Location from,
   required List<LatLng> polylinePoints,
@@ -28,7 +27,6 @@ import 'helpers.dart';
       : polylinePoints[fromIndex];
   return (fromPolylineIndex: fromIndex, snappedFromPoint: snapped);
 }
-
 
 ({List<String> steps, List<DirectionsStepInfo> stepInfos}) buildPreludeSteps({
   required String fromLabel,

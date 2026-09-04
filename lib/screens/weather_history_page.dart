@@ -30,7 +30,7 @@ class _WeatherHistoryPageState extends State<WeatherHistoryPage> {
   void initState() {
     super.initState();
     final now = DateTime.now();
-    // Default to previous complete month
+
     final prev = DateTime(now.year, now.month - 1, 1);
     _monthlyYear = prev.year;
     _monthlyMonth = prev.month;
@@ -136,7 +136,7 @@ class _WeatherHistoryPageState extends State<WeatherHistoryPage> {
     final now = DateTime.now();
     final prev = DateTime(now.year, now.month - 1, 1);
     final nextDate = DateTime(_monthlyYear, _monthlyMonth + 1, 1);
-    if (nextDate.isAfter(prev)) return; // Can't go beyond previous month
+    if (nextDate.isAfter(prev)) return;
     setState(() {
       if (_monthlyMonth == 12) {
         _monthlyYear++;
@@ -402,8 +402,6 @@ class _WeatherHistoryPageState extends State<WeatherHistoryPage> {
 
 }
 
-// --- Sub-widgets ---
-
 class _LocationChip extends StatelessWidget {
   const _LocationChip({
     required this.label,
@@ -452,7 +450,7 @@ class _ForecastDayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Extract month/day from date
+
     final parts = date.split('-');
     final monthDay = parts.length == 3 ? '${parts[2]}/${parts[1]}' : date;
 
@@ -552,5 +550,3 @@ class _ErrorCard extends StatelessWidget {
     );
   }
 }
-
-

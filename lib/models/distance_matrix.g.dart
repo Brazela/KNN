@@ -1,10 +1,6 @@
 
 part of 'distance_matrix.dart';
 
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
-
 DistanceMatrix _$DistanceMatrixFromJson(Map<String, dynamic> json) =>
     DistanceMatrix(
       distanceMeters: (json['distance_meters'] as num).toInt(),

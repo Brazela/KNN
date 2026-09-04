@@ -9,11 +9,9 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/widgets.dart';
 
-/// A single filterable service category.
-///
-/// [type] is a real Google Places type string matching what
+
 /// [GoogleMapsService.nearbySearch] and [GoogleMapsService.categoryEmoji]
-/// use.
+
 class _ServiceCategory {
   const _ServiceCategory(this.type, this.label);
 
@@ -30,10 +28,8 @@ const _categories = [
   _ServiceCategory('electric_vehicle_charging_station', 'EV Charging'),
 ];
 
-/// Nearby Services page — category filters plus a list of nearby service
-/// cards with rating, distance, and a route-planning action.
+
 class NearbyServicesPage extends StatefulWidget {
-  /// Creates a [NearbyServicesPage].
   const NearbyServicesPage({super.key});
 
   @override
@@ -112,17 +108,13 @@ class _NearbyServicesPageState extends State<NearbyServicesPage> {
     return _places.where((p) => p.types.contains(_activeType)).toList();
   }
 
-  /// Reference point used to compute "how far away" each service is.
-  ///
-  /// Uses a fixed Kuala Lumpur point since the sample data is KL-based.
+  
   Location get _referenceLocation => const Location(
         latitude: 3.1637,
         longitude: 101.7411,
         address: 'Current Location',
       );
 
-  /// Sets [TripProvider]'s origin/destination and opens the Comparison
-  /// page.
   void _viewRoute(BuildContext context, NearbyPlace place) {
     final tripProvider = context.read<TripProvider>();
     tripProvider.setOrigin(_referenceLocation);
@@ -246,7 +238,6 @@ class _NearbyServicesPageState extends State<NearbyServicesPage> {
   }
 }
 
-/// Placeholder shown when no services match the active filter.
 class _EmptyState extends StatelessWidget {
   const _EmptyState();
 

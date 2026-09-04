@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../utils/constants.dart';
 
 class CostComparisonCard extends StatelessWidget {
-  /// Creates a [CostComparisonCard].
+
   const CostComparisonCard({
     this.title = 'Cost comparison',
     this.driveCost = 'RM 18',
@@ -12,16 +12,12 @@ class CostComparisonCard extends StatelessWidget {
     super.key,
   });
 
-  /// Card title.
   final String title;
 
-  /// Displayed driving cost.
   final String driveCost;
 
-  /// Displayed transit cost.
   final String transitCost;
 
-  /// Savings highlight text.
   final String savingsText;
 
   @override
@@ -113,7 +109,6 @@ class CostComparisonCard extends StatelessWidget {
   }
 }
 
-/// Single mode cost tile inside the comparison card.
 class _ModeCostTile extends StatelessWidget {
   const _ModeCostTile({
     required this.icon,

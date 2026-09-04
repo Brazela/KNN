@@ -8,13 +8,11 @@ import 'weather.dart';
 
 part 'trip.g.dart';
 
-
 enum TravelMode { transit, driving }
-
 
 @JsonSerializable(fieldRename: FieldRename.snake)
 class Trip {
-  
+
   const Trip({
     required this.id,
     required this.origin,
@@ -34,10 +32,8 @@ class Trip {
     this.savingsTime,
   });
 
-  
   factory Trip.fromJson(Map<String, dynamic> json) => _$TripFromJson(json);
 
-  
   factory Trip.fromComparison({
     required Comparison comparison,
     required TravelMode mode,
@@ -57,7 +53,6 @@ class Trip {
 
     final recommendedMode = comparison.recommendation.name;
     final followed = comparison.recommendation.name == mode.name ? 1 : 0;
-
 
     double? savingsCost;
     int? savingsTime;
@@ -90,53 +85,37 @@ class Trip {
     );
   }
 
-  
   final String id;
 
-  
   final Location origin;
 
-  
   final Location destination;
 
-  
   @JsonKey(fromJson: _modeFromJson, toJson: _modeToJson)
   final TravelMode mode;
 
-  
   final double cost;
 
-  
   final int timeMinutes;
 
-  
   final DateTime date;
 
-  
   final Weather? weather;
 
-  
   final double? transitCost;
 
-  
   final int? transitTime;
 
-  
   final double? drivingCost;
 
-  
   final int? drivingTime;
 
-  
   final String? recommendedMode;
 
-  
   final int? followedRecommendation;
 
-  
   final double? savingsCost;
 
-  
   final int? savingsTime;
 
   static TravelMode _modeFromJson(String value) {
@@ -152,6 +131,5 @@ class Trip {
 
   static String _modeToJson(TravelMode mode) => mode.name;
 
-  
   Map<String, dynamic> toJson() => _$TripToJson(this);
 }

@@ -9,13 +9,8 @@ import '../utils/constants.dart';
 import '../widgets/widgets.dart';
 import 'search_destination.dart';
 
-
-
-
-
-
 class Homepage extends StatefulWidget {
-  
+
   const Homepage({super.key});
 
   @override
@@ -38,7 +33,6 @@ class _HomepageState extends State<Homepage> {
     }
   }
 
-  
   Future<void> _checkLocationPermission() async {
     final locationService = context.read<LocationService>();
     final tripProvider = context.read<TripProvider>();
@@ -75,7 +69,6 @@ class _HomepageState extends State<Homepage> {
         return;
       }
 
-      
       final loc = await locationService.getCurrentLocation();
       if (mounted) tripProvider.setCurrentLocation(loc);
     } catch (e) {
@@ -91,7 +84,6 @@ class _HomepageState extends State<Homepage> {
     final location = context.read<TripProvider>().currentLocation;
     if (location == null) return;
 
-    
     setState(() {
       _refreshTick++;
     });
@@ -133,7 +125,7 @@ class _HomepageState extends State<Homepage> {
                         const SizedBox(height: 18),
                         const _ShortcutsRow(),
                         const SizedBox(height: 24),
-                        
+
                         if (!isLoadingLocation) ...[
                           PopularPlacesWidget(
                             onPlaceSelected: (place) {
@@ -145,18 +137,17 @@ class _HomepageState extends State<Homepage> {
                           ),
                           const SizedBox(height: 18),
                         ],
-                        
+
                         if (!isLoadingLocation) ...[
                           WeatherWidget(key: ValueKey('weather-$_refreshTick')),
                           const SizedBox(height: 18),
                         ],
-                        
+
                         if (!isLoadingLocation) ...[
                           FuelPriceWidget(key: ValueKey('fuel-$_refreshTick')),
                           const SizedBox(height: 18),
                         ],
-                        
-                        
+
                         if (!isLoadingLocation) ...[
                           const ParkingShortcutWidget(),
                           const SizedBox(height: 18),
@@ -176,7 +167,7 @@ class _HomepageState extends State<Homepage> {
         currentIndex: _bottomNavIndex,
         onTap: (index) {
           if (index == _bottomNavIndex) {
-            
+
             setState(() => _refreshTick++);
             return;
           }
@@ -201,7 +192,6 @@ class _HomepageState extends State<Homepage> {
   }
 }
 
-
 class _TopBar extends StatelessWidget {
   const _TopBar();
 
@@ -220,7 +210,6 @@ class _TopBar extends StatelessWidget {
     );
   }
 }
-
 
 class _HeroSearch extends StatelessWidget {
   const _HeroSearch();
@@ -255,7 +244,7 @@ class _HeroSearch extends StatelessWidget {
         const SizedBox(height: 18),
         Row(
           children: [
-            
+
             Expanded(
               child: GestureDetector(
                 onTap: () {
@@ -302,7 +291,7 @@ class _HeroSearch extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            
+
             GestureDetector(
               onTap: () {
                 Navigator.of(context).push(
@@ -341,7 +330,6 @@ class _HeroSearch extends StatelessWidget {
   }
 }
 
-
 class _ShortcutsRow extends StatelessWidget {
   const _ShortcutsRow();
 
@@ -378,12 +366,6 @@ class _ShortcutsRow extends StatelessWidget {
     );
   }
 
-  
-  
-  
-  
-  
-  
   void _onPlaceTap(
     BuildContext context,
     TripProvider tripProvider, {
@@ -402,7 +384,6 @@ class _ShortcutsRow extends StatelessWidget {
     _openSetPlace(context, tripProvider, isHome: isHome);
   }
 
-  
   void _onPlaceLongPress(
     BuildContext context,
     TripProvider tripProvider, {
@@ -447,7 +428,6 @@ class _ShortcutsRow extends StatelessWidget {
     );
   }
 
-  
   Future<void> _openSetPlace(
     BuildContext context,
     TripProvider tripProvider, {

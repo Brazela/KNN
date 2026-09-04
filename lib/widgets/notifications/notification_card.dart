@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 import '../../models/models.dart';
 import '../../utils/constants.dart';
 
-
 class NotificationCard extends StatelessWidget {
-  /// Creates a [NotificationCard].
+
   const NotificationCard({
     required this.notification,
     required this.onTap,
@@ -13,21 +12,16 @@ class NotificationCard extends StatelessWidget {
     super.key,
   });
 
-  /// The notification this card displays.
   final AppNotification notification;
 
-  /// Called when the user taps the card (used to mark it read).
   final VoidCallback onTap;
 
-  /// Called when the user taps the delete icon.
   final VoidCallback? onDelete;
 
   IconData get _icon => Icons.attach_money_rounded;
 
   Color get _color => AppColors.success;
 
-  /// Formats [notification.timestamp] as a short relative time, e.g.
-  /// "5m ago", "3h ago", "Yesterday".
   String _relativeTime(DateTime time) {
     final diff = DateTime.now().difference(time);
     if (diff.inMinutes < 1) return 'Just now';

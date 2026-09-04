@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
 
-
 class TripHistoryService {
   static const String _storageKey = 'trips_history';
 
@@ -36,7 +35,6 @@ class TripHistoryService {
     return _cache!;
   }
 
-
   Future<void> _persist(List<Trip> trips) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -47,7 +45,6 @@ class TripHistoryService {
     }
   }
 
-  /// Inserts or replaces [trip] (matched by [Trip.id]), newest first.
   Future<void> insertTrip(Trip trip) async {
     final trips = await _load();
     trips.removeWhere((t) => t.id == trip.id);
@@ -58,10 +55,6 @@ class TripHistoryService {
     await _persist(trips);
   }
 
-  /// Returns trips filtered by [mode] and [searchQuery], newest first.
-  ///
-  /// [searchQuery] matches the origin or destination address
-  /// case-insensitively, mirroring the previous SQL LIKE behaviour.
   Future<List<Trip>> getTrips({
     TravelMode? mode,
     String? searchQuery,
@@ -72,7 +65,6 @@ class TripHistoryService {
     return _page(filtered, limit, offset);
   }
 
-  /// Counts trips matching [mode] and [searchQuery].
   Future<int> countTrips({
     TravelMode? mode,
     String? searchQuery,
@@ -80,12 +72,10 @@ class TripHistoryService {
     return _filter(await _load(), mode, searchQuery).length;
   }
 
-  /// Returns every stored trip, newest first.
   Future<List<Trip>> getAllTrips() async {
     return List.of(await _load());
   }
 
-  /// Returns trips recorded on the given [date] (year/month/day match).
   Future<List<Trip>> getTripsForDate(DateTime date) async {
     final all = await _load();
     return all
@@ -96,22 +86,17 @@ class TripHistoryService {
         .toList();
   }
 
-  /// Deletes every stored trip.
   Future<void> clearHistory() async {
     _cache = [];
     await _persist(_cache!);
   }
 
-  /// Deletes the trip with the given [id], if present.
   Future<void> deleteTrip(String id) async {
     final trips = await _load();
     trips.removeWhere((t) => t.id == id);
     await _persist(trips);
   }
 
-  /// Aggregate stats over trips that carry a recommendation.
-  ///
-  /// Keys: `total`, `transit_recs`, `driving_recs`, `total_savings`.
   Future<Map<String, dynamic>> getRecommendationStats() async {
     final recs =
         (await _load()).where((t) => t.recommendedMode != null).toList();
@@ -129,7 +114,6 @@ class TripHistoryService {
     };
   }
 
-  /// Returns trips that carry a recommendation, newest first.
   Future<List<Trip>> getRecommendations({
     int limit = 5,
     int offset = 0,
@@ -139,12 +123,10 @@ class TripHistoryService {
     return _page(recs, limit, offset);
   }
 
-  /// Counts trips that carry a recommendation.
   Future<int> countRecommendations() async {
     return (await _load()).where((t) => t.recommendedMode != null).length;
   }
 
-  /// Filters [trips] by [mode] and [searchQuery], sorted newest first.
   List<Trip> _filter(
     List<Trip> trips,
     TravelMode? mode,
@@ -161,7 +143,6 @@ class TripHistoryService {
       ..sort((a, b) => b.date.compareTo(a.date));
   }
 
-  /// Slices [items] to the [limit]/[offset] window, bounds-safe.
   List<Trip> _page(List<Trip> items, int limit, int offset) {
     final start = offset.clamp(0, items.length).toInt();
     final end = (offset + limit).clamp(0, items.length).toInt();

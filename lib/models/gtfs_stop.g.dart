@@ -1,10 +1,5 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'gtfs_stop.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 GTFSStop _$GTFSStopFromJson(Map<String, dynamic> json) => GTFSStop(
   stopId: json['stop_id'] as String,

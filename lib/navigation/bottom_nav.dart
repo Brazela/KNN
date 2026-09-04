@@ -2,19 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../utils/constants.dart';
 
-/// Bottom navigation bar with Home, Trips, Compare, and Settings tabs.
 class BottomNav extends StatelessWidget {
-  /// Creates a [BottomNav].
+
   const BottomNav({
     required this.currentIndex,
     required this.onTap,
     super.key,
   });
 
-  /// Currently selected tab index.
   final int currentIndex;
 
-  /// Callback invoked when a tab is tapped.
   final ValueChanged<int> onTap;
 
   @override

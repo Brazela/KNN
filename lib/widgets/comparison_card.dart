@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../utils/constants.dart';
 
-
 class ComparisonCard extends StatelessWidget {
-  /// Creates a [ComparisonCard].
+
   const ComparisonCard({
     required this.title,
     required this.icon,
@@ -18,31 +17,22 @@ class ComparisonCard extends StatelessWidget {
     super.key,
   });
 
-  /// Card title, e.g. "LRT Kelana Jaya Line" or "Driving".
   final String title;
 
-  /// Leading icon for the card.
   final IconData icon;
 
-  /// Formatted cost string, e.g. "RM 3.50".
   final String cost;
 
-  /// Formatted time string, e.g. "45m".
   final String time;
 
-  /// Detail lines shown in the expandable section.
   final List<String> details;
 
-  /// Accent color (green for transit, blue for driving).
   final Color accentColor;
 
-  /// Whether this option is the recommended one.
   final bool isRecommended;
 
-  /// Whether this card is currently selected by the user.
   final bool isSelected;
 
-  /// Called when the card is tapped.
   final VoidCallback? onTap;
 
   @override
@@ -74,7 +64,7 @@ class ComparisonCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header row with icon, title, and recommended chip.
+
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: Row(
@@ -136,7 +126,6 @@ class ComparisonCard extends StatelessWidget {
                 ),
               ),
 
-              // Cost and time row.
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: Row(
@@ -164,7 +153,6 @@ class ComparisonCard extends StatelessWidget {
                 ),
               ),
 
-              // Expandable details.
               Theme(
                 data: Theme.of(context).copyWith(
                   dividerColor: Colors.transparent,
@@ -225,7 +213,6 @@ class ComparisonCard extends StatelessWidget {
   }
 }
 
-/// A single stat display inside the comparison card.
 class _StatTile extends StatelessWidget {
   const _StatTile({
     required this.label,

@@ -3,11 +3,7 @@ import '../models/nearby_place.dart';
 import '../models/parking_spot.dart';
 import 'helpers.dart';
 
-/// Enriches a list of [NearbyPlace] results into [ParkingSpot] objects
-/// with estimated price and computed distance from a given [destination].
-///
-/// Real Google Places fields (name, location, rating, photos, hours) are
-/// passed through. Price is estimated because the API does not provide it.
+
 List<ParkingSpot> enrichParkingSpots(
   List<NearbyPlace> places,
   Location destination,

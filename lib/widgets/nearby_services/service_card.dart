@@ -4,14 +4,7 @@ import '../../models/models.dart';
 import '../../services/services.dart';
 import '../../utils/constants.dart';
 
-/// A single nearby-service row: category icon, name, rating, distance,
-/// vicinity, and a "View Route" action.
-///
-/// Visually mirrors the existing `_PlaceCard` in
-/// `widgets/popular_places_widget.dart` (same colours, same rating-row
-/// layout) so a place reads consistently whether it shows up on the
-/// Homepage's horizontal carousel or here. This version is full-width and
-/// adds the action button that a carousel card doesn't need.
+
 class ServiceCard extends StatelessWidget {
   /// Creates a [ServiceCard].
   const ServiceCard({
@@ -38,7 +31,7 @@ class ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final emoji = GoogleMapsService.categoryEmoji(place.types);
+    final icon = GoogleMapsService.categoryIcon(place.types);
 
     return Container(
       width: double.infinity,
@@ -69,7 +62,7 @@ class ServiceCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Center(
-                  child: Text(emoji, style: const TextStyle(fontSize: 20)),
+                  child: Icon(icon, size: 20, color: AppColors.primary),
                 ),
               ),
               const SizedBox(width: 12),

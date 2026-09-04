@@ -5,10 +5,7 @@ import 'package:http/http.dart' as http;
 import '../models/models.dart';
 import '../utils/constants.dart';
 
-/// Service for place autocomplete using the new Google Places API.
-///
-/// Calls `POST /v1/places:autocomplete` with the API key in the header
-/// (same pattern as the Nearby Search and Place Details migration).
+
 class NativePlacesService {
   final http.Client _client;
 

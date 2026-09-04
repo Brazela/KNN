@@ -2,11 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../utils/constants.dart';
 
-/// A single settings row: an icon, a label, and a dropdown selector.
-///
-/// Generic over [T] so the same row works for `AppLanguage`,
-/// `DefaultTravelMode`, `FuelType`, or any other small enum-backed choice,
-/// without duplicating this layout three times.
+
 class SettingsDropdownTile<T> extends StatelessWidget {
   /// Creates a [SettingsDropdownTile].
   const SettingsDropdownTile({
@@ -22,7 +18,7 @@ class SettingsDropdownTile<T> extends StatelessWidget {
   /// Icon shown at the start of the row.
   final IconData icon;
 
-  /// Row label, e.g. "Language".
+  /// Row label, e.g. "Default Mode".
   final String label;
 
   /// Currently selected option.

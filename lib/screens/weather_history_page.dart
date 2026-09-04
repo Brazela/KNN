@@ -1,8 +1,4 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
 import '../models/models.dart';
@@ -22,12 +18,9 @@ class WeatherHistoryPage extends StatefulWidget {
 class _WeatherHistoryPageState extends State<WeatherHistoryPage> {
   Location? _selectedLocation;
   List<Weather> _forecasts = [];
-  List<WeatherWarning> _storedWarnings = [];
   MonthlyAverage? _monthlyAverage;
   bool _loadingForecast = false;
-  bool _loadingWarnings = false;
   bool _loadingMonthly = false;
-  bool _showAllWarnings = false;
   int _monthlyYear = 0;
   int _monthlyMonth = 0;
   String? _forecastError;
@@ -57,7 +50,6 @@ class _WeatherHistoryPageState extends State<WeatherHistoryPage> {
     if (_selectedLocation == null) return;
     await Future.wait([
       _loadForecast(),
-      _loadWarningsWithPersistence(),
       _loadMonthlyAverage(),
     ]);
   }
@@ -85,73 +77,6 @@ class _WeatherHistoryPageState extends State<WeatherHistoryPage> {
           _forecastError = e.toString();
         });
       }
-    }
-  }
-
-  Future<void> _loadWarningsWithPersistence() async {
-    setState(() => _loadingWarnings = true);
-
-    final service = context.read<WeatherService>();
-
-    // Always load persisted warnings first (safe outside try-catch)
-    final stored = await _readStoredWarnings();
-
-    try {
-      // Fetch live warnings
-      final live = await service.getWarnings();
-
-      // Merge: add live warnings not already in stored (by issued timestamp)
-      final existingIssued = stored.map((w) => w.issued).toSet();
-      for (final w in live) {
-        if (!existingIssued.contains(w.issued)) {
-          stored.add(w);
-        }
-      }
-
-      // Sort by issued descending (newest first)
-      stored.sort((a, b) => b.issued.compareTo(a.issued));
-
-      // Expire warnings older than 90 days
-      final cutoff = DateTime.now().subtract(const Duration(days: 90)).toIso8601String();
-      stored.removeWhere((w) => w.issued.compareTo(cutoff) < 0);
-
-      // Save back
-      await _writeStoredWarnings(stored);
-    } catch (_) {
-      // Live fetch failed — persisted warnings still display below
-    }
-
-    if (mounted) {
-      setState(() {
-        _storedWarnings = stored;
-        _loadingWarnings = false;
-      });
-    }
-  }
-
-  Future<List<WeatherWarning>> _readStoredWarnings() async {
-    try {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/weather_warnings.json');
-      if (!file.existsSync()) return [];
-      final contents = await file.readAsString();
-      final list = jsonDecode(contents) as List<dynamic>;
-      return list
-          .map((e) => WeatherWarning.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (_) {
-      return [];
-    }
-  }
-
-  Future<void> _writeStoredWarnings(List<WeatherWarning> warnings) async {
-    try {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/weather_warnings.json');
-      final list = warnings.map((w) => w.toJson()).toList();
-      await file.writeAsString(jsonEncode(list));
-    } catch (_) {
-      // Silently fail — persistence is best-effort
     }
   }
 
@@ -245,8 +170,6 @@ class _WeatherHistoryPageState extends State<WeatherHistoryPage> {
             const SizedBox(height: 20),
             _buildForecastSection(),
             const SizedBox(height: 20),
-            _buildWarningsSection(),
-            const SizedBox(height: 20),
             _buildMonthlyAverageSection(),
             const SizedBox(height: 40),
           ],
@@ -260,7 +183,7 @@ class _WeatherHistoryPageState extends State<WeatherHistoryPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '📍 ${_selectedLocation?.address ?? 'Current Location'}',
+          _selectedLocation?.address ?? 'Current Location',
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
@@ -273,13 +196,13 @@ class _WeatherHistoryPageState extends State<WeatherHistoryPage> {
           child: Row(
             children: [
               _LocationChip(
-                label: '📍 Current',
+                label: 'Current',
                 selected: _selectedLocation == tripProvider.currentLocation,
                 onTap: () => _selectLocation(tripProvider.currentLocation),
               ),
               const SizedBox(width: 8),
               _LocationChip(
-                label: '🏠 Home',
+                label: 'Home',
                 selected: _selectedLocation == tripProvider.home,
                 onTap: () {
                   if (tripProvider.home != null) {
@@ -300,7 +223,7 @@ class _WeatherHistoryPageState extends State<WeatherHistoryPage> {
               ),
               const SizedBox(width: 8),
               _LocationChip(
-                label: '💼 Work',
+                label: 'Work',
                 selected: _selectedLocation == tripProvider.work,
                 onTap: () {
                   if (tripProvider.work != null) {
@@ -321,7 +244,7 @@ class _WeatherHistoryPageState extends State<WeatherHistoryPage> {
               ),
               const SizedBox(width: 8),
               _LocationChip(
-                label: '🔍',
+                label: 'Search',
                 selected: false,
                 onTap: () async {
                   final result = await Navigator.of(context).pushNamed(
@@ -344,7 +267,7 @@ class _WeatherHistoryPageState extends State<WeatherHistoryPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          '📊 7-Day Forecast',
+          '7-Day Forecast',
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
@@ -380,85 +303,9 @@ class _WeatherHistoryPageState extends State<WeatherHistoryPage> {
                   emoji: emoji,
                   maxTemp: f.maxTemp,
                   minTemp: f.minTemp,
-                  summary: f.summaryForecast,
+                  summary: translateWeather(f.summaryForecast),
                 );
               },
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildWarningsSection() {
-    final display = _showAllWarnings ? _storedWarnings : _storedWarnings.take(2).toList();
-    final totalCount = _storedWarnings.length;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '⚠️ Past Warnings',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (_loadingWarnings)
-          const SizedBox(
-            height: 100,
-            child: Center(child: CircularProgressIndicator()),
-          )
-        else if (_storedWarnings.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: const Text(
-              'No past warnings',
-              style: TextStyle(color: AppColors.textMuted),
-            ),
-          )
-        else
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Column(
-              children: [
-                ...display.map((w) => _WarningCard(warning: w)),
-                if (totalCount > 2)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4, bottom: 8),
-                    child: Center(
-                      child: TextButton.icon(
-                        onPressed: () {
-                          setState(() => _showAllWarnings = !_showAllWarnings);
-                        },
-                        icon: Icon(
-                          _showAllWarnings
-                              ? Icons.expand_less_rounded
-                              : Icons.expand_more_rounded,
-                          size: 18,
-                        ),
-                        label: Text(
-                          _showAllWarnings
-                              ? 'Show less'
-                              : 'Show all $totalCount records',
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
             ),
           ),
       ],
@@ -552,6 +399,7 @@ class _WeatherHistoryPageState extends State<WeatherHistoryPage> {
       ],
     );
   }
+
 }
 
 // --- Sub-widgets ---
@@ -636,9 +484,9 @@ class _ForecastDayCard extends StatelessWidget {
               color: AppColors.textMuted,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(emoji, style: const TextStyle(fontSize: 28)),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
+          Text(emoji, style: const TextStyle(fontSize: 24)),
+          const SizedBox(height: 6),
           Text(
             '$maxTemp°',
             style: const TextStyle(
@@ -666,91 +514,6 @@ class _ForecastDayCard extends StatelessWidget {
               color: AppColors.textSecondary,
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _WarningCard extends StatelessWidget {
-  const _WarningCard({required this.warning});
-
-  final WeatherWarning warning;
-
-  @override
-  Widget build(BuildContext context) {
-    final date = warning.issued.length >= 10
-        ? warning.issued.substring(0, 10)
-        : warning.issued;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Text('⚠️', style: TextStyle(fontSize: 16)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  warning.titleEn.isNotEmpty ? warning.titleEn : warning.titleBm,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-              Text(
-                date,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w400,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          if (warning.textEn.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(left: 24),
-              child: Text(
-                warning.textEn,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w400,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ),
-          if (warning.validFrom.length >= 16 && warning.validTo.length >= 16)
-            Padding(
-              padding: const EdgeInsets.only(left: 24, top: 4),
-              child: Text(
-                'Valid: ${warning.validFrom.substring(11, 16)} - ${warning.validTo.substring(11, 16)}',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w400,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ),
-          if (warning.headingEn.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(left: 24, top: 2),
-              child: Text(
-                'Affected: ${warning.headingEn}',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w400,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ),
-          const Divider(height: 16),
         ],
       ),
     );
@@ -789,3 +552,5 @@ class _ErrorCard extends StatelessWidget {
     );
   }
 }
+
+

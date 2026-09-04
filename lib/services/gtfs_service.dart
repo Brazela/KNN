@@ -9,8 +9,7 @@ import '../models/models.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 
-/// Service responsible for fetching and parsing GTFS static and realtime data
-/// from data.gov.my.
+
 class GTFSService {
   /// Creates a [GTFSService].
   ///

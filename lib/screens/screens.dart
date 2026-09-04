@@ -1,15 +1,12 @@
 export 'comparison.dart';
 export 'favorites.dart';
 export 'homepage.dart';
-export 'insights_dashboard.dart';
 export 'live_tracking.dart';
 export 'nearby_services.dart';
 export 'notifications.dart';
 export 'origin_selection.dart';
-export 'profile.dart';
 export 'parking_locator.dart';
 export 'route_details.dart';
-export 'saved_route_comparison.dart';
 export 'search_destination.dart';
 export 'settings.dart';
 export 'trip_history.dart';

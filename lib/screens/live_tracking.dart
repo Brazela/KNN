@@ -14,18 +14,18 @@ import '../utils/helpers.dart';
 import '../utils/map_markers.dart';
 import '../widgets/widgets.dart';
 
-/// Live tracking screen for both transit and driving trips.
-///
-/// **Transit mode:** Polls GTFS realtime every 30 seconds to show the
-/// vehicle's current position on the map and calculate progress.
-///
-/// **Driving mode:** Streams the device's GPS location to track progress
-/// along the route polyline.
-///
-/// Displays a bottom status card with a progress bar, weather alerts,
-/// and quick actions (Share ETA, Alternative Route, Cancel Trip).
+
+
+
+
+
+
+
+
+
+
 class LiveTrackingPage extends StatefulWidget {
-  /// Creates a [LiveTrackingPage].
+  
   const LiveTrackingPage({super.key});
 
   @override
@@ -35,7 +35,7 @@ class LiveTrackingPage extends StatefulWidget {
 class _LiveTrackingPageState extends State<LiveTrackingPage> {
   GoogleMapController? _mapController;
 
-  // Route data from arguments.
+  
   TravelMode? _mode;
   TransitRoute? _transitRoute;
   Location? _origin;
@@ -44,36 +44,36 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
   List<String> _steps = [];
   List<DirectionsStepInfo> _stepInfos = [];
 
-  // Tracking state.
+  
   StreamSubscription<Location>? _locationSub;
   Location? _currentPosition;
   double _progress = 0.0;
   String _etaText = 'Calculating…';
   String? _statusMessage;
 
-  /// Total polyline length in km (used to map progress → current step).
+  
   double _polylineLength = 0.0;
 
-  /// Visible-list index of the current step (auto-advances with progress).
+  
   int? _currentStepIndex;
 
-  /// Key for the step list so map markers can scroll it into view.
+  
   final GlobalKey<RouteStepListState> _stepListKey =
       GlobalKey<RouteStepListState>();
 
-  /// Index into the polyline where the user's from-location sits (nearest
-  /// point, snapped to the road).
+  
+  
   int _fromPolylineIndex = 0;
 
-  /// The waypoint snapped to the nearest polyline point.
+  
   LatLng? _snappedFromPoint;
 
-  /// Display label for the waypoint (e.g. "KL118" or the station name).
+  
   String? _preludeLabel;
 
-  /// Number of steps skipped from the start of the display list. Driving
-  /// hides its trivial first step unless a waypoint was set (in which case
-  /// a synthetic "Go to waypoint" step is prepended and must be shown).
+  
+  
+  
   int get _skipOffset =>
       _snappedFromPoint != null ? 0 : (_mode == TravelMode.driving ? 1 : 0);
 
@@ -86,7 +86,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _initFromArgs());
   }
 
-  /// Extracts route arguments and starts the appropriate tracking.
+  
   void _initFromArgs() {
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is! Map<String, dynamic>) {
@@ -115,7 +115,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     _setupMapOverlays();
 
     if (_mode == TravelMode.transit) {
-      // Static transit route — no live tracking.
+      
       final mins = _transitRoute?.durationMinutes ?? 0;
       setState(() {
         _etaText = mins > 0 ? '$mins min to destination' : 'Transit route';
@@ -125,12 +125,12 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     }
   }
 
-  /// Draws the route polyline, start/destination markers, and numbered
-  /// step pins on the map.
+  
+  
   Future<void> _setupMapOverlays() async {
     _polylineLength = _computePolylineLength();
 
-// Build polylines — yellow "get to your start" leg + main route.
+
     _polylines.clear();
     final mainColor = _mode == TravelMode.transit
         ? AppColors.success
@@ -169,8 +169,8 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     _markers.clear();
 
     if (_snappedFromPoint != null) {
-      // The waypoint (from-location or nearest station) is the journey's
-      // start point, snapped to the nearest road.
+      
+      
       _markers.add(
         Marker(
           markerId: const MarkerId('start'),
@@ -183,7 +183,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
           ),
         ),
       );
-      // The starting GPS position.
+      
       _markers.add(
         Marker(
           markerId: const MarkerId('origin'),
@@ -209,14 +209,14 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
       );
     }
 
-    // Numbered step pins (clickable) — numbering matches the step list.
+    
     for (var i = _skipOffset; i < _stepInfos.length; i++) {
       final stepInfo = _stepInfos[i];
       final stepPos = stepInfo.endLatLng;
       if (stepPos == null) continue;
 
       final number = i + 1 - _skipOffset;
-      final markerIcon = await getNumberedMarker(number);
+      final markerIcon = await getNumberedMarker(number, size: 24);
       _markers.add(
         Marker(
           markerId: MarkerId('step_$number'),
@@ -231,7 +231,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
       );
     }
 
-    // Destination marker.
+    
     _markers.add(
       Marker(
         markerId: const MarkerId('destination'),
@@ -249,13 +249,13 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     if (!mounted) return;
     setState(() {});
 
-    // Fit camera to route.
+    
     if (_polylinePoints.isNotEmpty) {
       _fitCameraToRoute();
     }
   }
 
-  /// Total length of the route polyline in km.
+  
   double _computePolylineLength() {
     var total = 0.0;
     for (var i = 0; i < _polylinePoints.length - 1; i++) {
@@ -269,13 +269,13 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     return total;
   }
 
-  /// Handles tapping a numbered step pin: shows its info window and
-  /// scrolls the matching step into view in the bottom sheet.
+  
+  
   void _onStepMarkerTap(int number) {
     _stepListKey.currentState?.scrollToStep(number - 1);
   }
 
-  /// Moves the camera to the tapped step's location.
+  
   void _onStepTap(int visibleIndex) {
     final stepIndex = visibleIndex + _skipOffset;
     if (stepIndex >= _stepInfos.length) return;
@@ -284,15 +284,15 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     _mapController!.animateCamera(CameraUpdate.newLatLng(pos));
   }
 
-  /// Determines the current step (visible-list index) from the progress
-  /// fraction along the route polyline.
+  
+  
   int? _computeCurrentStepIndex() {
     if (_stepInfos.isEmpty || _polylineLength <= 0) return null;
     final hasPrelude = _snappedFromPoint != null;
 
-    // Distances along the polyline for the real steps. When a from-location
-    // was set, the synthetic "Go to from" step (index 0) is skipped here —
-    // it is highlighted only before the first real step is reached.
+    
+    
+    
     final start = hasPrelude ? 1 : 0;
     final cumDists = <double>[];
     for (var i = start; i < _stepInfos.length; i++) {
@@ -306,15 +306,15 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
       if (cumDists[i] <= traveled) current = i;
     }
 
-    // Map the real-step index back to a visible-list index. With a prelude,
-    // the synthetic step occupies visible index 0, so real step i is at
-    // visible index i + 1.
+    
+    
+    
     final visible = hasPrelude ? current + 1 : current - _skipOffset;
-    if (visible < 0) return 0; // still before the first real step
+    if (visible < 0) return 0; 
     return visible;
   }
 
-  /// Distance in km from the route start to [point] along the polyline.
+  
   double _distanceAlongPolyline(LatLng point) {
     var nearest = 0;
     var best = double.infinity;
@@ -342,7 +342,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     return cum;
   }
 
-  /// Moves the camera to fit the entire route.
+  
   void _fitCameraToRoute() {
     if (_mapController == null || _polylinePoints.isEmpty) return;
 
@@ -369,9 +369,9 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     );
   }
 
-  // ─── Driving tracking ───
+  
 
-  /// Starts listening to the device's GPS location stream.
+  
   void _startDrivingTracking() {
     final locationService = context.read<LocationService>();
 
@@ -385,11 +385,11 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
         );
   }
 
-  /// Handles a new GPS position update.
+  
   void _onLocationUpdate(Location location) {
     setState(() => _currentPosition = location);
 
-    // Update current position marker.
+    
     _markers.removeWhere((m) => m.markerId.value == 'current');
     _markers.add(
       Marker(
@@ -402,15 +402,15 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
       ),
     );
 
-    // Calculate progress along the polyline.
+    
     _calculateDrivingProgress(location);
   }
 
-  /// Calculates driving progress as a percentage of the total polyline.
+  
   void _calculateDrivingProgress(Location location) {
     if (_polylinePoints.length < 2) return;
 
-    // Find nearest point on polyline.
+    
     var nearestIndex = 0;
     var minDistance = double.infinity;
 
@@ -428,7 +428,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
       }
     }
 
-    // Calculate total polyline length.
+    
     var totalLength = 0.0;
     for (var i = 0; i < _polylinePoints.length - 1; i++) {
       totalLength += calculateDistance(
@@ -439,7 +439,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
       );
     }
 
-    // Calculate length up to nearest point.
+    
     var lengthSoFar = 0.0;
     for (var i = 0; i < nearestIndex; i++) {
       lengthSoFar += calculateDistance(
@@ -454,7 +454,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
 
     final progress = (lengthSoFar / totalLength).clamp(0.0, 1.0);
     final remainingKm = totalLength * (1 - progress);
-    final etaMinutes = (remainingKm / 0.8).ceil(); // assume 48 km/h avg urban
+    final etaMinutes = (remainingKm / 0.8).ceil(); 
 
     setState(() {
       _progress = progress;
@@ -465,9 +465,9 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     });
   }
 
-  // ─── Actions ───
+  
 
-  /// Copies a simple ETA message to the clipboard.
+  
   Future<void> _shareEta() async {
     final message =
         'I\'m on my way! ETA: $_etaText via ${_mode == TravelMode.transit ? 'transit' : 'driving'}.';
@@ -479,7 +479,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     }
   }
 
-  /// Opens Google Maps with the destination as the waypoint (driving only).
+  
   Future<void> _openInGoogleMaps() async {
     final dest = _destination;
     if (dest == null) return;
@@ -498,18 +498,18 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     }
   }
 
-  /// Navigates back to the comparison screen for an alternative route.
-  ///
-  /// Pops back to the existing comparison page in the navigation stack so
-  /// the user can still go back to change the origin/destination afterwards
-  /// (instead of wiping the stack and landing on the homepage).
+  
+  
+  
+  
+  
   void _alternativeRoute() {
     Navigator.of(context).popUntil(
       (route) => route.settings.name == AppRoutes.comparison,
     );
   }
 
-  /// Cancels the trip and returns to the home screen.
+  
   void _cancelTrip() {
     showDialog<void>(
       context: context,
@@ -558,7 +558,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          // Full-screen map.
+          
           GoogleMap(
             initialCameraPosition: CameraPosition(
               target: _origin != null
@@ -580,7 +580,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
             },
           ),
 
-          // Back button (top-left).
+          
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -610,7 +610,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
             ),
           ),
 
-          // Zoom controls (top-right).
+          
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -684,12 +684,12 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
             ),
           ),
 
-          // Bottom sheet with live status + step list.
+          
           if (_mode != null &&
               (_statusMessage == null || _currentPosition != null))
             _buildBottomSheet(accentColor),
 
-          // Status message overlay (shown only when there's no live data yet).
+          
           if (_statusMessage != null && _currentPosition == null)
             Positioned(
               left: 16,
@@ -722,7 +722,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
           ),
           child: Column(
             children: [
-              // Drag handle.
+              
               Center(
                 child: Container(
                   width: 40,
@@ -735,12 +735,12 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
                 ),
               ),
 
-              // Live status (progress, ETA, actions).
+              
               _buildStatusCardContent(accentColor),
 
               const Divider(height: 24, indent: 20, endIndent: 20),
 
-              // Steps header.
+              
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
@@ -772,7 +772,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
               ),
               const SizedBox(height: 4),
 
-              // Step list (auto-highlights the current step).
+              
               Expanded(
                 child: RouteStepList(
                   key: _stepListKey,
@@ -800,7 +800,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ETA and mode.
+          
           Row(
             children: [
               Container(
@@ -832,7 +832,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
             ],
           ),
 
-          // Open in Google Maps (driving only).
+          
           if (_mode == TravelMode.driving) ...[
             const SizedBox(height: 12),
             SizedBox(
@@ -857,7 +857,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
           const Divider(height: 1),
           const SizedBox(height: 12),
 
-          // Quick actions.
+          
           Row(
             children: [
               Expanded(
@@ -941,7 +941,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
 
   }
 
-/// A compact action button for the live tracking bottom card.
+
 class _ActionButton extends StatelessWidget {
   const _ActionButton({
     required this.icon,

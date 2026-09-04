@@ -9,13 +9,13 @@ import '../utils/constants.dart';
 import '../widgets/widgets.dart';
 import 'search_destination.dart';
 
-/// Root homepage for the KNN Commute app.
-///
-/// On first load, requests location permission. Once granted, displays
-/// current weather, popular nearby places, quick shortcuts, and
-/// transit/cost status summaries.
+
+
+
+
+
 class Homepage extends StatefulWidget {
-  /// Creates a [Homepage].
+  
   const Homepage({super.key});
 
   @override
@@ -25,6 +25,7 @@ class Homepage extends StatefulWidget {
 class _HomepageState extends State<Homepage> {
   final int _bottomNavIndex = 0;
   bool _locationChecked = false;
+  int _refreshTick = 0;
   final GlobalKey<RefreshIndicatorState> _refreshKey =
       GlobalKey<RefreshIndicatorState>();
 
@@ -37,7 +38,7 @@ class _HomepageState extends State<Homepage> {
     }
   }
 
-  /// Checks location permission and requests the user's current position.
+  
   Future<void> _checkLocationPermission() async {
     final locationService = context.read<LocationService>();
     final tripProvider = context.read<TripProvider>();
@@ -74,7 +75,7 @@ class _HomepageState extends State<Homepage> {
         return;
       }
 
-      // Permission granted — get location.
+      
       final loc = await locationService.getCurrentLocation();
       if (mounted) tripProvider.setCurrentLocation(loc);
     } catch (e) {
@@ -90,10 +91,9 @@ class _HomepageState extends State<Homepage> {
     final location = context.read<TripProvider>().currentLocation;
     if (location == null) return;
 
-    // Trigger a full data reload by clearing and re-reading dependencies.
-    // Widgets will re-fetch via didChangeDependencies on next build.
+    
     setState(() {
-      _locationChecked = true; // stays true; re-trigger in widgets.
+      _refreshTick++;
     });
   }
 
@@ -133,7 +133,7 @@ class _HomepageState extends State<Homepage> {
                         const SizedBox(height: 18),
                         const _ShortcutsRow(),
                         const SizedBox(height: 24),
-                        // Popular places — engaging explore content right after shortcuts.
+                        
                         if (!isLoadingLocation) ...[
                           PopularPlacesWidget(
                             onPlaceSelected: (place) {
@@ -145,23 +145,23 @@ class _HomepageState extends State<Homepage> {
                           ),
                           const SizedBox(height: 18),
                         ],
-                        // Weather widget — compact useful context.
+                        
                         if (!isLoadingLocation) ...[
-                          const WeatherWidget(),
+                          WeatherWidget(key: ValueKey('weather-$_refreshTick')),
                           const SizedBox(height: 18),
                         ],
-                        // Fuel price widget.
+                        
                         if (!isLoadingLocation) ...[
-                          const FuelPriceWidget(),
+                          FuelPriceWidget(key: ValueKey('fuel-$_refreshTick')),
                           const SizedBox(height: 18),
                         ],
-                        // Parking locator shortcut — only visible when a
-                        // destination is set.
+                        
+                        
                         if (!isLoadingLocation) ...[
                           const ParkingShortcutWidget(),
                           const SizedBox(height: 18),
                         ],
-                        const CostComparisonCard(),
+                        const TodayCostCard(),
                         const SizedBox(height: 100),
                       ],
                     ),
@@ -175,7 +175,11 @@ class _HomepageState extends State<Homepage> {
       bottomNavigationBar: BottomNav(
         currentIndex: _bottomNavIndex,
         onTap: (index) {
-          if (index == _bottomNavIndex) return;
+          if (index == _bottomNavIndex) {
+            
+            setState(() => _refreshTick++);
+            return;
+          }
           switch (index) {
             case 1:
               Navigator.of(context).pushReplacementNamed(
@@ -197,7 +201,7 @@ class _HomepageState extends State<Homepage> {
   }
 }
 
-/// Top bar + weather chip section.
+
 class _TopBar extends StatelessWidget {
   const _TopBar();
 
@@ -213,14 +217,11 @@ class _TopBar extends StatelessWidget {
       onNotificationTap: () {
         Navigator.of(context).pushNamed(AppRoutes.notifications);
       },
-      onProfileTap: () {
-        Navigator.of(context).pushNamed(AppRoutes.profile);
-      },
     );
   }
 }
 
-/// Hero search input section.
+
 class _HeroSearch extends StatelessWidget {
   const _HeroSearch();
 
@@ -254,7 +255,7 @@ class _HeroSearch extends StatelessWidget {
         const SizedBox(height: 18),
         Row(
           children: [
-            // Search text area — tap to go to search destination page.
+            
             Expanded(
               child: GestureDetector(
                 onTap: () {
@@ -301,7 +302,7 @@ class _HeroSearch extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            // Map icon — tap to pin a location on the map.
+            
             GestureDetector(
               onTap: () {
                 Navigator.of(context).push(
@@ -340,7 +341,7 @@ class _HeroSearch extends StatelessWidget {
   }
 }
 
-/// Quick shortcut chips row.
+
 class _ShortcutsRow extends StatelessWidget {
   const _ShortcutsRow();
 
@@ -377,12 +378,12 @@ class _ShortcutsRow extends StatelessWidget {
     );
   }
 
-  /// Tapping a saved place uses it as the destination and continues the
-  /// trip flow; tapping an unsaved place opens the "set place" picker.
-  ///
-  /// The saved place is pushed through the search-destination page (pre-
-  /// filled) so the navigation stack stays consistent — pressing back from
-  /// the origin-selection page returns to the "where to" page, not home.
+  
+  
+  
+  
+  
+  
   void _onPlaceTap(
     BuildContext context,
     TripProvider tripProvider, {
@@ -401,7 +402,7 @@ class _ShortcutsRow extends StatelessWidget {
     _openSetPlace(context, tripProvider, isHome: isHome);
   }
 
-  /// Long-pressing a saved place offers Change / Remove actions.
+  
   void _onPlaceLongPress(
     BuildContext context,
     TripProvider tripProvider, {
@@ -446,7 +447,7 @@ class _ShortcutsRow extends StatelessWidget {
     );
   }
 
-  /// Opens the search picker to set a Home/Work place.
+  
   Future<void> _openSetPlace(
     BuildContext context,
     TripProvider tripProvider, {

@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 
 import '../utils/constants.dart';
 
-/// Card previewing the cost comparison between driving and transit.
 class CostComparisonCard extends StatelessWidget {
   /// Creates a [CostComparisonCard].
   const CostComparisonCard({
+    this.title = 'Cost comparison',
     this.driveCost = 'RM 18',
     this.transitCost = 'RM 3',
     this.savingsText = 'You save RM 15 by taking transit today',
     super.key,
   });
+
+  /// Card title.
+  final String title;
 
   /// Displayed driving cost.
   final String driveCost;
@@ -41,17 +44,17 @@ class CostComparisonCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.compare_arrows_rounded,
                 size: 18,
                 color: AppColors.textSecondary,
               ),
-              SizedBox(width: 6),
+              const SizedBox(width: 6),
               Text(
-                'Cost comparison',
-                style: TextStyle(
+                title,
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: Color(0xFF374151),
@@ -64,7 +67,7 @@ class CostComparisonCard extends StatelessWidget {
             children: [
               _ModeCostTile(
                 icon: Icons.directions_car_rounded,
-                label: 'Drive',
+                label: 'Driving',
                 cost: driveCost,
                 color: AppColors.primary,
               ),

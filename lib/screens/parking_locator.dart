@@ -9,12 +9,7 @@ import '../utils/constants.dart';
 import '../utils/parking_utils.dart';
 import 'search_destination.dart';
 
-/// Full-page parking locator that finds nearby parking spots near a
-/// selected destination via Google Places API.
-///
-/// Supports filtering by All / Paid / Free / Open Now, and offers
-/// Navigate (external maps) and View Route (in-app directions) actions
-/// per parking spot.
+
 class ParkingLocatorPage extends StatefulWidget {
   /// Creates a [ParkingLocatorPage].
   const ParkingLocatorPage({super.key});
@@ -144,6 +139,7 @@ class _ParkingLocatorPageState extends State<ParkingLocatorPage> {
         'mode': TravelMode.driving,
         'origin': parkingLoc,
         'destination': dest,
+        'fromParking': true,
       },
     );
   }
@@ -155,9 +151,7 @@ class _ParkingLocatorPageState extends State<ParkingLocatorPage> {
   // -------------------------------------------------------------------------
 
   Future<void> _changeDestination() async {
-    // Reuse the existing location-selection mechanism (SearchDestinationPage)
-    // in "pick a place" mode. The picked location is returned here so we can
-    // search for parking near it, without entering the trip (origin) flow.
+
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => SearchDestinationPage(
@@ -445,25 +439,25 @@ class _FilterChipRow extends StatelessWidget {
       child: Row(
         children: [
           _FilterChip(
-            label: '🅿️ All',
+            label: 'All',
             isActive: activeFilter == _ParkingFilter.all,
             onTap: () => onFilterChanged(_ParkingFilter.all),
           ),
           const SizedBox(width: 8),
           _FilterChip(
-            label: '💰 Paid',
+            label: 'Paid',
             isActive: activeFilter == _ParkingFilter.paid,
             onTap: () => onFilterChanged(_ParkingFilter.paid),
           ),
           const SizedBox(width: 8),
           _FilterChip(
-            label: '🆓 Free',
+            label: 'Free',
             isActive: activeFilter == _ParkingFilter.free,
             onTap: () => onFilterChanged(_ParkingFilter.free),
           ),
           const SizedBox(width: 8),
           _FilterChip(
-            label: '🕐 Open Now',
+            label: 'Open Now',
             isActive: activeFilter == _ParkingFilter.openNow,
             onTap: () => onFilterChanged(_ParkingFilter.openNow),
           ),

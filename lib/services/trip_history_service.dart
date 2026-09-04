@@ -5,24 +5,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
 
-/// Local trip history storage backed by [SharedPreferences].
-///
-/// The whole history is stored as one JSON array under a single key and
-/// mirrored in memory; every mutation rewrites the key. There is no schema,
-/// so there are no migrations that can fail silently.
+
 class TripHistoryService {
-  /// Storage key holding the JSON-encoded trip list.
   static const String _storageKey = 'trips_history';
 
-  /// Upper bound on stored trips so the preferences blob stays small.
   static const int _maxTrips = 500;
 
   List<Trip>? _cache;
 
-  /// Loads the stored history once and caches it in memory.
-  ///
-  /// A corrupt or incompatible payload is treated as an empty history
-  /// rather than crashing every read.
   Future<List<Trip>> _load() async {
     final cached = _cache;
     if (cached != null) return cached;
@@ -46,8 +36,7 @@ class TripHistoryService {
     return _cache!;
   }
 
-  /// Persists the in-memory cache. Failures are logged; the in-memory list
-  /// remains the session's source of truth either way.
+
   Future<void> _persist(List<Trip> trips) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -94,6 +83,17 @@ class TripHistoryService {
   /// Returns every stored trip, newest first.
   Future<List<Trip>> getAllTrips() async {
     return List.of(await _load());
+  }
+
+  /// Returns trips recorded on the given [date] (year/month/day match).
+  Future<List<Trip>> getTripsForDate(DateTime date) async {
+    final all = await _load();
+    return all
+        .where((t) =>
+            t.date.year == date.year &&
+            t.date.month == date.month &&
+            t.date.day == date.day)
+        .toList();
   }
 
   /// Deletes every stored trip.

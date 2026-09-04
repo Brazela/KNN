@@ -22,8 +22,4 @@ Map<String, dynamic> _$FavoriteLocationToJson(FavoriteLocation instance) =>
       'location': instance.location,
     };
 
-const _$FavoriteLocationTypeEnumMap = {
-  FavoriteLocationType.home: 'home',
-  FavoriteLocationType.work: 'work',
-  FavoriteLocationType.custom: 'custom',
-};
+const _$FavoriteLocationTypeEnumMap = {FavoriteLocationType.custom: 'custom'};

@@ -4,44 +4,79 @@ import '../../models/models.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 
-/// A single bookmarked route row on the Favorites page.
-///
-/// Matches the Favorites page widget list exactly: Origin→Destination +
-/// Mode + Savings + Plan button. Cost/time aren't shown here — that level
-/// of detail lives on the Comparison page, which "Plan Route" opens.
-///
-/// Savings is formatted with the existing `formatCurrency` helper from
-/// `utils/helpers.dart` rather than ad-hoc string interpolation, so a route
-/// saved here reads identically to the same currency figures shown
-/// elsewhere in the app.
+
 class SavedRouteCard extends StatelessWidget {
   /// Creates a [SavedRouteCard].
   const SavedRouteCard({
     required this.route,
     required this.onPlanRoute,
-    this.onTap,
+    this.onEdit,
+    this.onDelete,
     super.key,
   });
 
   /// The saved route this card displays.
   final SavedRoute route;
 
-  /// Called when the user taps "Plan Route" (plan a trip on this route
-  /// *now* — sets [TripProvider] and opens the live Comparison page).
+ 
   final VoidCallback onPlanRoute;
 
-  /// Called when the user taps the card body (view saved-route detail —
-  /// trend chart and savings history — separate from planning a trip now).
-  final VoidCallback? onTap;
+  /// Called when the user long-presses and picks "Edit route".
+  final VoidCallback? onEdit;
+
+  /// Called when the user long-presses and picks "Delete route".
+  final VoidCallback? onDelete;
 
   bool get _isTransit => route.mode == TravelMode.transit;
+
+  void _showActions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (onEdit != null)
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Edit route'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  onEdit?.call();
+                },
+              ),
+            if (onDelete != null)
+              ListTile(
+                leading: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.redAccent,
+                ),
+                title: const Text(
+                  'Delete route',
+                  style: TextStyle(color: Colors.redAccent),
+                ),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  onDelete?.call();
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final modeColor = _isTransit ? AppColors.success : AppColors.primary;
 
     return GestureDetector(
-      onTap: onTap,
+      onLongPress: (onEdit != null || onDelete != null)
+          ? () => _showActions(context)
+          : null,
       child: Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -90,21 +125,23 @@ class SavedRouteCard extends StatelessWidget {
                   color: modeColor,
                 ),
               ),
-              Text(
-                '  •  ',
-                style: TextStyle(fontSize: 12, color: AppColors.textMuted),
-              ),
-              Flexible(
-                child: Text(
-                  'Saves ${formatCurrency(route.savingsPerTripRM)}/trip',
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.success,
+              if (route.savingsPerTripRM > 0) ...[
+                Text(
+                  '  •  ',
+                  style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                ),
+                Flexible(
+                  child: Text(
+                    'Saves ${formatCurrency(route.savingsPerTripRM)}/trip',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.success,
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
           const SizedBox(height: 14),

@@ -127,7 +127,7 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
           _selectedOrigin = loc;
           _selectedOriginLabel = 'Current Location';
           _pickerCenter = LatLng(loc.latitude, loc.longitude);
-          _searchController.text = '📍 Current Location';
+          _searchController.text = 'Current Location';
           _loading = false;
         });
       }
@@ -141,30 +141,17 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
     }
   }
 
-  // --- Quick selects ---
+  // --- Saved places ---
 
-  void _selectHome() {
-    final home = context.read<TripProvider>().home;
-    if (home != null) {
-      setState(() {
-        _selectedOrigin = home;
-        _selectedOriginLabel = 'Home';
-        _pickerCenter = LatLng(home.latitude, home.longitude);
-        _searchController.text = '🏠 Home';
-      });
-    }
-  }
-
-  void _selectWork() {
-    final work = context.read<TripProvider>().work;
-    if (work != null) {
-      setState(() {
-        _selectedOrigin = work;
-        _selectedOriginLabel = 'Work';
-        _pickerCenter = LatLng(work.latitude, work.longitude);
-        _searchController.text = '💼 Work';
-      });
-    }
+  void _selectSavedPlace(Location location, String label) {
+    setState(() {
+      _selectedOrigin = location;
+      _selectedOriginLabel = label;
+      _pickerCenter = LatLng(location.latitude, location.longitude);
+      _searchController.text = label;
+      _suggestions = [];
+    });
+    _searchFocus.unfocus();
   }
 
   // --- Confirm ---
@@ -255,8 +242,6 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
       return _buildMapPicker();
     }
 
-    final tripProvider = context.watch<TripProvider>();
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -305,7 +290,7 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
                   ? const Center(child: CircularProgressIndicator())
                   : _selectedOrigin != null
                       ? _buildPlacePreview()
-                      : _buildSelectionBody(tripProvider),
+                      : _buildSelectionBody(),
             ),
           ],
         ),
@@ -313,42 +298,16 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
     );
   }
 
-  /// Quick-access chips + autocomplete suggestions.
-  Widget _buildSelectionBody(TripProvider tripProvider) {
+  /// Saved places + autocomplete suggestions.
+  Widget _buildSelectionBody() {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Quick chips row.
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                // Home.
-                if (tripProvider.home != null)
-                  _QuickChip(
-                    icon: Icons.home_rounded,
-                    label: 'Home',
-                    color: AppColors.success,
-                    onTap: _selectHome,
-                  ),
-                // Work.
-                if (tripProvider.work != null)
-                  _QuickChip(
-                    icon: Icons.work_outline_rounded,
-                    label: 'Work',
-                    color: AppColors.success,
-                    onTap: _selectWork,
-                  ),
-              ],
-            ),
-          ),
+          // Saved places (Home/Work).
+          SavedPlacesSection(onSelect: _selectSavedPlace),
 
-          const SizedBox(height: 8),
-
-          // "📍 Current Location" as first suggestion item.
+          // "Current Location" as first suggestion item.
           ListTile(
             onTap: _selectCurrentLocation,
             contentPadding:
@@ -367,7 +326,7 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
               ),
             ),
             title: const Text(
-              '📍 Current Location',
+              'Current Location',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
@@ -640,51 +599,6 @@ class _OriginSelectionPageState extends State<OriginSelectionPage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// A quick-access chip for origin selection (Current Location, Home, etc.).
-class _QuickChip extends StatelessWidget {
-  const _QuickChip({
-    required this.icon,
-    required this.label,
-    required this.color,
-    this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -2,11 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../utils/constants.dart';
 
-/// A single settings row: an icon, a label with an optional subtitle, and a
-/// toggle switch.
-///
-/// Reused for Dark Mode in the General section and for each alert type in
-/// the Notifications section.
+
 class SettingsSwitchTile extends StatelessWidget {
   /// Creates a [SettingsSwitchTile].
   const SettingsSwitchTile({

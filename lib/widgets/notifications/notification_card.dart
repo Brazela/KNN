@@ -3,15 +3,13 @@ import 'package:flutter/material.dart';
 import '../../models/models.dart';
 import '../../utils/constants.dart';
 
-/// A single row on the Notifications page.
-///
-/// Unread notifications get a filled dot and a tinted background; tapping
-/// a card marks it read via [onTap].
+
 class NotificationCard extends StatelessWidget {
   /// Creates a [NotificationCard].
   const NotificationCard({
     required this.notification,
     required this.onTap,
+    this.onDelete,
     super.key,
   });
 
@@ -21,31 +19,15 @@ class NotificationCard extends StatelessWidget {
   /// Called when the user taps the card (used to mark it read).
   final VoidCallback onTap;
 
-  IconData get _icon {
-    switch (notification.category) {
-      case NotificationCategory.price:
-        return Icons.attach_money_rounded;
-      case NotificationCategory.weather:
-        return Icons.cloud_outlined;
-    }
-  }
+  /// Called when the user taps the delete icon.
+  final VoidCallback? onDelete;
 
-  Color get _color {
-    switch (notification.category) {
-      case NotificationCategory.price:
-        return AppColors.success;
-      case NotificationCategory.weather:
-        return AppColors.primary;
-    }
-  }
+  IconData get _icon => Icons.attach_money_rounded;
+
+  Color get _color => AppColors.success;
 
   /// Formats [notification.timestamp] as a short relative time, e.g.
   /// "5m ago", "3h ago", "Yesterday".
-  ///
-  /// Kept local to this widget rather than added to `utils/helpers.dart`:
-  /// relative-time display is specific to a notification feed, while
-  /// `formatDateTime`/`formatDate` in `helpers.dart` are absolute-time
-  /// formatters used elsewhere (trip history, etc.) and are left as-is.
   String _relativeTime(DateTime time) {
     final diff = DateTime.now().difference(time);
     if (diff.inMinutes < 1) return 'Just now';
@@ -132,6 +114,12 @@ class NotificationCard extends StatelessWidget {
                 ],
               ),
             ),
+            if (onDelete != null)
+              IconButton(
+                icon: const Icon(Icons.close_rounded, size: 18),
+                color: AppColors.textMuted,
+                onPressed: onDelete,
+              ),
           ],
         ),
       ),

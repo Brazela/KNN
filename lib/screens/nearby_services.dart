@@ -11,10 +11,9 @@ import '../widgets/widgets.dart';
 
 /// A single filterable service category.
 ///
-/// [type] is a real Google Places type string (matching what
+/// [type] is a real Google Places type string matching what
 /// [GoogleMapsService.nearbySearch] and [GoogleMapsService.categoryEmoji]
-/// already use), not a custom enum — so this page's dummy data doubles as
-/// a preview of what a real `nearbySearch(type: ...)` call would render.
+/// use.
 class _ServiceCategory {
   const _ServiceCategory(this.type, this.label);
 
@@ -33,12 +32,6 @@ const _categories = [
 
 /// Nearby Services page — category filters plus a list of nearby service
 /// cards with rating, distance, and a route-planning action.
-///
-/// UI-mockup implementation: [_dummyPlaces] seeds the list with local data
-/// reusing the real [NearbyPlace] model (see `models/nearby_place.dart`,
-/// already built for [PopularPlacesWidget]/Google Places integration), so
-/// swapping this for a real `GoogleMapsService.nearbySearch()` call later
-/// is a data-source change only — the widget tree doesn't need to change.
 class NearbyServicesPage extends StatefulWidget {
   /// Creates a [NearbyServicesPage].
   const NearbyServicesPage({super.key});
@@ -121,14 +114,7 @@ class _NearbyServicesPageState extends State<NearbyServicesPage> {
 
   /// Reference point used to compute "how far away" each service is.
   ///
-  /// Always uses this fixed Kuala Lumpur point rather than the device's
-  /// real GPS location. The dummy [NearbyPlace] data above is anchored to
-  /// KL; on an emulator with no custom location set, `Geolocator`/
-  /// `TripProvider.currentLocation` defaults to Mountain View, California —
-  /// mixing that real (but arbitrary, in this mockup phase) location with
-  /// KL-based dummy data produced nonsensical ~13,600km "distances". Once
-  /// real Google Places data replaces the dummy list, this should read
-  /// [TripProvider.currentLocation] instead.
+  /// Uses a fixed Kuala Lumpur point since the sample data is KL-based.
   Location get _referenceLocation => const Location(
         latitude: 3.1637,
         longitude: 101.7411,
@@ -136,16 +122,7 @@ class _NearbyServicesPageState extends State<NearbyServicesPage> {
       );
 
   /// Sets [TripProvider]'s origin/destination and opens the Comparison
-  /// page — the same "hand off to TripProvider, then push Comparison"
-  /// pattern used by Favorites' "Plan Route".
-  ///
-  /// MAD.docx lists "navigate and view route actions" (plural) for this
-  /// page. A true external "Navigate" (opening Google Maps directly) would
-  /// need the `url_launcher` package, which isn't in `pubspec.yaml` yet —
-  /// left out for now since this page was picked specifically to avoid a
-  /// new dependency. This single "View Route" button covers the in-app
-  /// half of that requirement; say the word if you want the external-maps
-  /// button added too.
+  /// page.
   void _viewRoute(BuildContext context, NearbyPlace place) {
     final tripProvider = context.read<TripProvider>();
     tripProvider.setOrigin(_referenceLocation);

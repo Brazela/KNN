@@ -240,7 +240,7 @@ class RecommendationCard extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: TextButton.icon(
               onPressed: onCompareAgain,
-              icon: const Text('🔄', style: TextStyle(fontSize: 14)),
+              icon: const Icon(Icons.replay_rounded, size: 18),
               label: const Text(
                 'Compare Again',
                 style: TextStyle(

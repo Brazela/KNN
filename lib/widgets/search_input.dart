@@ -2,11 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../utils/constants.dart';
 
-/// A reusable search input field used by both the Search Destination and
-/// Origin Selection pages.
-///
-/// Features a search icon on the left, a text field in the centre, and an
-/// optional map-picker icon on the right.
+
 class SearchInput extends StatelessWidget {
   /// Creates a [SearchInput].
   const SearchInput({

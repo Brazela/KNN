@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../navigation/navigation.dart';
 import '../providers/providers.dart';
+import '../services/services.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/widgets.dart';
@@ -141,6 +142,30 @@ class _TripHistoryPageState extends State<TripHistoryPage>
     Navigator.of(context).pushNamed(AppRoutes.comparison);
   }
 
+  Future<void> _onSaveRoute(Trip trip) async {
+    final storage = LocalStorageService();
+    final existing = await storage.loadSavedRoutes() ?? [];
+    final route = SavedRoute(
+      id: 'route-${DateTime.now().millisecondsSinceEpoch}',
+      origin: trip.origin,
+      destination: trip.destination,
+      mode: trip.mode,
+      cost: trip.cost,
+      timeMinutes: trip.timeMinutes,
+      savingsPerTripRM: 0,
+    );
+    final filtered = existing
+        .where((r) =>
+            !isSameLocation(r.origin, route.origin) ||
+            !isSameLocation(r.destination, route.destination))
+        .toList();
+    await storage.saveSavedRoutes([...filtered, route]);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Route saved to Favorites')),
+    );
+  }
+
   Future<void> _loadRecommendations({required int page, bool replace = false}) async {
     final gen = ++_recGeneration;
     if (!replace) {
@@ -202,13 +227,16 @@ class _TripHistoryPageState extends State<TripHistoryPage>
         onTap: (index) {
           switch (index) {
             case 0:
-              Navigator.of(context).pop();
+              Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+              break;
             case 1:
               break;
             case 2:
-              Navigator.of(context).pushNamed(AppRoutes.comparison);
+              Navigator.of(context).pushReplacementNamed(AppRoutes.comparison);
+              break;
             case 3:
-              Navigator.of(context).pushNamed(AppRoutes.settings);
+              Navigator.of(context).pushReplacementNamed(AppRoutes.settings);
+              break;
           }
         },
       ),
@@ -316,8 +344,8 @@ class _TripHistoryPageState extends State<TripHistoryPage>
   Widget _buildFilterChips() {
     const chips = <_FilterChipData>[
       _FilterChipData('All', null),
-      _FilterChipData('🚇 Transit', TravelMode.transit),
-      _FilterChipData('🚗 Driving', TravelMode.driving),
+      _FilterChipData('Transit', TravelMode.transit),
+      _FilterChipData('Driving', TravelMode.driving),
     ];
 
     return Padding(
@@ -436,6 +464,7 @@ class _TripHistoryPageState extends State<TripHistoryPage>
         return TripCard(
           trip: _trips[index],
           onRepeatTrip: () => _onRepeatTrip(_trips[index]),
+          onSaveRoute: () => _onSaveRoute(_trips[index]),
         );
       },
     );

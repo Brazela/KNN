@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../utils/constants.dart';
 
-/// A dialog asking the user to grant location permission.
-///
-/// Shown on first launch or whenever location access is needed but not yet
-/// granted. Provides "Skip" and "Allow" actions.
+
 class LocationPermissionDialog extends StatelessWidget {
   /// Creates a [LocationPermissionDialog].
   const LocationPermissionDialog({

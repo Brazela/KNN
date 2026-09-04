@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../utils/constants.dart';
 
-/// A single step in a route's turn-by-turn or transit instructions.
-///
-/// Displays a step number badge, an icon, the description, duration,
-/// and an optional realtime status indicator.
+
 class RouteStepCard extends StatelessWidget {
   /// Creates a [RouteStepCard].
   const RouteStepCard({

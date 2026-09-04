@@ -66,7 +66,11 @@ class StatusCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text('🌦️', style: TextStyle(fontSize: 18)),
+              const Icon(
+                Icons.wb_cloudy_rounded,
+                size: 18,
+                color: Colors.white70,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(

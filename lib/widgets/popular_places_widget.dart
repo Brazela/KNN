@@ -7,11 +7,7 @@ import '../services/services.dart';
 import '../utils/helpers.dart';
 import '../utils/constants.dart';
 
-/// Displays a horizontally scrollable list of nearby popular places.
-///
-/// Uses the Google Places Nearby Search API to find restaurants, cafes, and
-/// transit stations near the user's current location. Only places rated
-/// 4.0 and above are shown.
+
 class PopularPlacesWidget extends StatefulWidget {
   /// Creates a [PopularPlacesWidget].
   ///
@@ -132,7 +128,7 @@ class _PopularPlacesWidgetState extends State<PopularPlacesWidget> {
           ),
         ),
         SizedBox(
-          height: 158,
+          height: 220,
           child: RawScrollbar(
             controller: _scrollController,
             thumbVisibility: true,
@@ -180,7 +176,7 @@ class _PlaceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final emoji = GoogleMapsService.categoryEmoji(place.types);
+    final icon = GoogleMapsService.categoryIcon(place.types);
 
     // Compute distance from user if coordinates available.
     String? distanceText;
@@ -218,18 +214,8 @@ class _PlaceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top accent bar with emoji.
-            Container(
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(15),
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Text(emoji, style: const TextStyle(fontSize: 22)),
-            ),
+            // Photo banner (falls back to category icon when unavailable).
+            _PlacePhoto(place: place, icon: icon),
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
               child: Column(
@@ -300,6 +286,55 @@ class _PlaceCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Photo banner for a place card. Shows the place photo when available,
+/// otherwise falls back to the category icon (with a loading spinner).
+class _PlacePhoto extends StatelessWidget {
+  const _PlacePhoto({
+    required this.place,
+    required this.icon,
+  });
+
+  final NearbyPlace place;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final photoUrl = place.firstPhotoUrl;
+    if (photoUrl == null || photoUrl.isEmpty) {
+      return _fallback();
+    }
+    return Image.network(
+      photoUrl,
+      width: double.infinity,
+      height: 110,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return _fallback(loading: true);
+      },
+      errorBuilder: (context, error, stackTrace) => _fallback(),
+    );
+  }
+
+  Widget _fallback({bool loading = false}) {
+    return Container(
+      width: double.infinity,
+      height: 110,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+      ),
+      alignment: Alignment.center,
+      child: loading
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(icon, size: 22, color: AppColors.primary),
     );
   }
 }

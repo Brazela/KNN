@@ -1,21 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
+import '../services/services.dart';
 import '../utils/constants.dart';
 import '../widgets/widgets.dart';
 
-/// Notifications feed — price, weather, transit, and departure alerts.
-///
-/// UI-mockup implementation: [_notifications] is seeded with local,
-/// in-memory dummy data covering all four categories listed in MAD.docx.
-/// Nothing is persisted yet; this is tracked as the Local Database module.
-///
-/// No wireframe exists for this page — MAD.docx explicitly notes "NO IMAGE
-/// FOR NOTIFICATION PAGE" — so the layout follows the feature list (price /
-/// weather / transit / departure alerts, mark-all-read) using the same
-/// header, card, and spacing patterns established by the rest of the app.
 class NotificationsPage extends StatefulWidget {
-  /// Creates a [NotificationsPage].
   const NotificationsPage({super.key});
 
   @override
@@ -23,41 +13,46 @@ class NotificationsPage extends StatefulWidget {
 }
 
 class _NotificationsPageState extends State<NotificationsPage> {
-  List<AppNotification> _notifications = _dummyNotifications();
-  NotificationCategory? _activeFilter;
+  final _service = NotificationService();
+  List<AppNotification> _notifications = [];
+  bool _loading = true;
 
-  static List<AppNotification> _dummyNotifications() {
-    final now = DateTime.now();
-    return [
-      AppNotification(
-        id: 'n1',
-        category: NotificationCategory.weather,
-        title: 'Heavy rain expected this afternoon',
-        message: 'Driving time to KL Sentral may double. Transit is the '
-            'more reliable option today.',
-        timestamp: now.subtract(const Duration(minutes: 12)),
-      ),
-      AppNotification(
-        id: 'n2',
-        category: NotificationCategory.price,
-        title: 'Fuel prices updated',
-        message:
-            'RON95 is now RM2.05/L this week, down 2 sen from last week.',
-        timestamp: now.subtract(const Duration(hours: 6)),
-        isRead: true,
-      ),
-    ];
+  @override
+  void initState() {
+    super.initState();
+    _load();
   }
 
-  List<AppNotification> get _visibleNotifications {
-    if (_activeFilter == null) return _notifications;
-    return _notifications.where((n) => n.category == _activeFilter).toList();
+  Future<void> _load() async {
+    final list = await _service.load();
+    if (!mounted) return;
+    setState(() {
+      _notifications = list;
+      _loading = false;
+    });
   }
 
-  int get _unreadCount => _notifications.where((n) => !n.isRead).length;
+  Future<void> _delete(AppNotification notification) async {
+    await _service.delete(notification.id);
+    if (!mounted) return;
+    setState(() {
+      _notifications =
+          _notifications.where((n) => n.id != notification.id).toList();
+    });
+  }
 
-  void _markAsRead(AppNotification notification) {
+  Future<void> _clearAll() async {
+    final confirmed = await _showConfirmDialog(context);
+    if (confirmed != true || !mounted) return;
+    await _service.clearAll();
+    if (!mounted) return;
+    setState(() => _notifications = []);
+  }
+
+  Future<void> _markAsRead(AppNotification notification) async {
     if (notification.isRead) return;
+    await _service.markRead(notification.id);
+    if (!mounted) return;
     setState(() {
       _notifications = [
         for (final n in _notifications)
@@ -66,13 +61,17 @@ class _NotificationsPageState extends State<NotificationsPage> {
     });
   }
 
-  void _markAllRead() {
+  Future<void> _markAllRead() async {
+    await _service.markAllRead();
+    if (!mounted) return;
     setState(() {
       _notifications = [
         for (final n in _notifications) n.copyWith(isRead: true),
       ];
     });
   }
+
+  int get _unreadCount => _notifications.where((n) => !n.isRead).length;
 
   @override
   Widget build(BuildContext context) {
@@ -95,15 +94,23 @@ class _NotificationsPageState extends State<NotificationsPage> {
                     children: [
                       _buildHeader(),
                       const SizedBox(height: 16),
-                      _buildFilterRow(),
-                      const SizedBox(height: 16),
-                      if (_visibleNotifications.isEmpty)
+                      if (_loading)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 40),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        )
+                      else if (_notifications.isEmpty)
                         const _EmptyState()
                       else
-                        for (final notification in _visibleNotifications) ...[
+                        for (final notification in _notifications) ...[
                           NotificationCard(
                             notification: notification,
                             onTap: () => _markAsRead(notification),
+                            onDelete: () => _delete(notification),
                           ),
                           const SizedBox(height: 10),
                         ],
@@ -165,6 +172,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
             ],
           ),
         ),
+        if (_notifications.isNotEmpty)
+          TextButton(
+            onPressed: _clearAll,
+            child: const Text(
+              'Clear all',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ),
         TextButton(
           onPressed: _unreadCount > 0 ? _markAllRead : null,
           child: const Text(
@@ -175,42 +190,39 @@ class _NotificationsPageState extends State<NotificationsPage> {
       ],
     );
   }
-
-  Widget _buildFilterRow() {
-    return SizedBox(
-      height: 36,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          CategoryFilterChip(
-            label: 'All',
-            selected: _activeFilter == null,
-            onTap: () => setState(() => _activeFilter = null),
-          ),
-          for (final category in NotificationCategory.values) ...[
-            const SizedBox(width: 8),
-            CategoryFilterChip(
-              label: _categoryLabel(category),
-              selected: _activeFilter == category,
-              onTap: () => setState(() => _activeFilter = category),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  String _categoryLabel(NotificationCategory category) {
-    switch (category) {
-      case NotificationCategory.price:
-        return 'Price';
-      case NotificationCategory.weather:
-        return 'Weather';
-    }
-  }
 }
 
-/// Placeholder shown when there are no notifications for the active filter.
+Future<bool?> _showConfirmDialog(BuildContext context) {
+  return showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Text(
+        'Clear all notifications?',
+        style: TextStyle(fontWeight: FontWeight.w700),
+      ),
+      content: const Text('This removes every notification from this device.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.redAccent,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: const Text('Clear'),
+        ),
+      ],
+    ),
+  );
+}
+
 class _EmptyState extends StatelessWidget {
   const _EmptyState();
 

@@ -7,9 +7,7 @@ import '../models/models.dart';
 /// Earth radius in kilometres used by the Haversine formula.
 const double _earthRadiusKm = 6371.0;
 
-/// Returns true when [a] and [b] refer to the same place, either by
-/// matching Google place IDs or by matching coordinates (rounded to
-/// ~5 decimal places, roughly 1 m).
+
 bool isSameLocation(Location a, Location b) {
   if (a.placeId != null &&
       b.placeId != null &&
@@ -24,6 +22,20 @@ bool isSameLocation(Location a, Location b) {
   final latB = double.parse(b.latitude.toStringAsFixed(precision));
   final lngB = double.parse(b.longitude.toStringAsFixed(precision));
   return latA == latB && lngA == lngB;
+}
+
+
+bool isInMalaysia(Location location) {
+  final address = location.address;
+  if (address != null && address.trim().isNotEmpty) {
+    return address.toLowerCase().contains('malaysia');
+  }
+  final lat = location.latitude;
+  final lng = location.longitude;
+  final inPeninsular = lat >= 1.0 && lat <= 6.7 && lng >= 99.6 && lng <= 104.6;
+  final inEastMalaysia =
+      lat >= 0.85 && lat <= 7.4 && lng >= 109.5 && lng <= 119.4;
+  return inPeninsular || inEastMalaysia;
 }
 
 /// Calculates the great-circle distance between two coordinates using the
@@ -88,16 +100,7 @@ String formatDateTime(DateTime dateTime) {
   return DateFormat('d MMM yyyy, HH:mm').format(dateTime);
 }
 
-/// Formats a [DateTime] into a short date string.
-///
-/// Example: 10 Jul 2026
-String formatDate(DateTime dateTime) {
-  return DateFormat('d MMM yyyy').format(dateTime);
-}
 
-/// Parses a GTFS time string (HH:MM:SS) into a [Duration] since midnight.
-///
-/// GTFS times may exceed 23:59:59 for trips running past midnight.
 Duration parseGTFSTime(String time) {
   final parts = time.split(':');
   if (parts.length != 3) return Duration.zero;

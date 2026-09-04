@@ -1,23 +1,42 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:workmanager/workmanager.dart';
 
 import 'navigation/navigation.dart';
 import 'providers/providers.dart';
 import 'screens/screens.dart';
 import 'services/services.dart';
 
-/// App entry point.
-void main() {
-  runApp(const KNNApp());
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final notificationService = NotificationService();
+  await notificationService.init();
+  await Workmanager().initialize(notificationBackgroundTask);
+  await Workmanager().registerPeriodicTask(
+    'knn-notification-check',
+    'notificationCheck',
+    frequency: const Duration(hours: 6),
+    existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+  );
+  unawaited(notificationService.requestPermission());
+  unawaited(runNotificationCheck());
+  unawaited(syncHistory());
+  runApp(KNNApp(notificationService: notificationService));
 }
 
-/// Root widget for the KNN Commute application.
-///
-/// Provides all service classes via [MultiProvider] and configures the app
-/// theme and routing.
+
+
+
+
 class KNNApp extends StatelessWidget {
-  /// Creates the root [KNNApp].
-  const KNNApp({super.key});
+  
+  const KNNApp({super.key, required this.notificationService});
+
+  
+  final NotificationService notificationService;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +50,10 @@ class KNNApp extends StatelessWidget {
         Provider<LocationService>(create: (_) => const LocationService()),
         Provider<TripHistoryService>(create: (_) => TripHistoryService()),
         Provider<SavedPlacesService>(create: (_) => SavedPlacesService()),
+        Provider<NotificationService>(create: (_) => notificationService),
+        ChangeNotifierProvider<SettingsService>(
+          create: (context) => SettingsService()..load(),
+        ),
         ChangeNotifierProvider<TripProvider>(
           create: (context) {
             final provider = TripProvider();
@@ -50,6 +73,29 @@ class KNNApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF1A2CC8),
             brightness: Brightness.light,
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1A2CC8),
+              foregroundColor: Colors.white,
+            ),
+          ),
+          filledButtonTheme: FilledButtonThemeData(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF1A2CC8),
+              foregroundColor: Colors.white,
+            ),
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF1A2CC8),
+            ),
+          ),
+          outlinedButtonTheme: OutlinedButtonThemeData(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF1A2CC8),
+              side: const BorderSide(color: Color(0xFF1A2CC8)),
+            ),
           ),
           fontFamily: 'Roboto',
         ),

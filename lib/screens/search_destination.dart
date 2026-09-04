@@ -11,19 +11,9 @@ import '../services/services.dart'; // provides GoogleMapsService, NativePlacesS
 import '../utils/constants.dart';
 import '../widgets/widgets.dart';
 
-/// Full-screen overlay page for searching a trip destination.
-///
-/// Provides Google Places autocomplete suggestions as the user types, a
-/// map-preview once a place is selected, and a full-screen map picker
-/// accessible via the map icon.
+
 class SearchDestinationPage extends StatefulWidget {
-  /// Creates a [SearchDestinationPage].
-  ///
-  /// If [initialPlace] is provided (e.g. from Popular Places), the page
-  /// will pre-select it and show the confirm button immediately.
-  ///
-  /// If [openMapPicker] is true, the page opens directly into the full-
-  /// screen map-picker mode for pinning a location on the map.
+
   const SearchDestinationPage({
     this.initialPlace,
     this.initialLocation,
@@ -33,20 +23,15 @@ class SearchDestinationPage extends StatefulWidget {
     super.key,
   });
 
-  /// An optional nearby place to pre-fill, bypassing the search step.
   final NearbyPlace? initialPlace;
 
-  /// An optional saved [Location] (e.g. Home/Work) to pre-fill, bypassing
-  /// the search step.
+
   final Location? initialLocation;
 
-  /// If true, the full-screen map picker is shown immediately on open
-  /// instead of the search interface.
+
   final bool openMapPicker;
 
-  /// When provided, the page runs in "save a place" mode: confirming a
-  /// selection calls this callback with the picked [Location] and pops
-  /// back instead of continuing the trip flow.
+
   final Future<void> Function(Location location)? onPlacePicked;
 
   /// Overrides the confirm button label (e.g. "Save as Home").
@@ -186,6 +171,23 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
         );
       }
     }
+  }
+
+  /// Selects a saved place (Home/Work) directly, mirroring suggestion select.
+  void _selectSavedPlace(Location location, String label) {
+    setState(() {
+      _selectedPlace = PlaceDetail(
+        placeId: location.placeId ?? '',
+        latitude: location.latitude,
+        longitude: location.longitude,
+        formattedAddress: location.address ?? label,
+        name: label,
+      );
+      _pickerCenter = LatLng(location.latitude, location.longitude);
+      _searchController.text = label;
+      _suggestions = [];
+    });
+    _searchFocus.unfocus();
   }
 
   void _confirm() {
@@ -330,9 +332,30 @@ class _SearchDestinationPageState extends State<SearchDestinationPage> {
   /// Suggestions list from autocomplete.
   Widget _buildSuggestionsList() {
     if (_suggestions.isEmpty) {
+      // Show saved places when the query is empty.
+      if (_searchController.text.trim().isEmpty) {
+        return ListView(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: [
+            SavedPlacesSection(onSelect: _selectSavedPlace),
+            const Padding(
+              padding: EdgeInsets.all(32),
+              child: Center(
+                child: Text(
+                  'Search for a destination',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      }
       return const Center(
         child: Text(
-          'Search for a destination',
+          'No results found',
           style: TextStyle(
             fontSize: 15,
             color: AppColors.textMuted,

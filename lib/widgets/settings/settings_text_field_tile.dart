@@ -2,12 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../utils/constants.dart';
 
-/// A single settings row: an icon, a label, and a text field with inline
-/// validation.
-///
-/// Used for the Home/Work address fields and the fuel consumption field.
-/// `autovalidateMode: onUserInteraction` gives immediate feedback without
-/// needing a separate "Save" step, matching a typical mobile settings page.
+
 class SettingsTextFieldTile extends StatelessWidget {
   /// Creates a [SettingsTextFieldTile].
   const SettingsTextFieldTile({
@@ -18,6 +13,7 @@ class SettingsTextFieldTile extends StatelessWidget {
     this.keyboardType,
     this.validator,
     this.suffixText,
+    this.onChanged,
     super.key,
   });
 
@@ -43,6 +39,9 @@ class SettingsTextFieldTile extends StatelessWidget {
   /// Optional unit shown after the input, e.g. "L/km".
   final String? suffixText;
 
+  /// Called as the user edits the field.
+  final ValueChanged<String>? onChanged;
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -67,6 +66,7 @@ class SettingsTextFieldTile extends StatelessWidget {
           controller: controller,
           keyboardType: keyboardType,
           validator: validator,
+          onChanged: onChanged,
           autovalidateMode: AutovalidateMode.onUserInteraction,
           style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
           decoration: InputDecoration(

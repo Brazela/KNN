@@ -7,19 +7,11 @@ import '../providers/providers.dart';
 import '../services/services.dart';
 import '../utils/constants.dart';
 import '../widgets/widgets.dart';
+import 'search_destination.dart';
 
-/// Favorites page — saved Home/Work locations and bookmarked routes.
-///
-/// Persisted via [LocalStorageService] (simple phone storage, per the
-/// team's decision — not a full database). On first run, before anything
-/// has been saved, the page seeds itself with the dummy data below and
-/// immediately persists it, so the same data is there on the next launch
-/// too. Saved Routes have no "add new" flow yet in this app (they're only
-/// ever created by saving one from a comparison elsewhere), so only the
-/// dummy seed and whatever gets added there will ever populate that list —
-/// this page only edits/deletes/loads/saves it.
+
 class FavoritesPage extends StatefulWidget {
-  /// Creates a [FavoritesPage].
+  
   const FavoritesPage({super.key});
 
   @override
@@ -29,7 +21,6 @@ class FavoritesPage extends StatefulWidget {
 class _FavoritesPageState extends State<FavoritesPage> {
   final _storage = LocalStorageService();
 
-  List<FavoriteLocation> _favorites = [];
   List<SavedRoute> _savedRoutes = [];
   bool _isLoading = true;
 
@@ -39,128 +30,151 @@ class _FavoritesPageState extends State<FavoritesPage> {
     _loadData();
   }
 
-  /// Loads persisted favorites/saved routes, falling back to the dummy
-  /// seed data (and persisting it immediately) on first run.
+  
   Future<void> _loadData() async {
-    final storedFavorites = await _storage.loadFavorites();
     final storedRoutes = await _storage.loadSavedRoutes();
     if (!mounted) return;
 
     setState(() {
-      _favorites = storedFavorites ?? _dummyFavorites();
-      _savedRoutes = storedRoutes ?? _dummySavedRoutes();
+      _savedRoutes = (storedRoutes ?? const [])
+          .where((r) => r.id != 'route-1' && r.id != 'route-2')
+          .toList();
       _isLoading = false;
     });
 
-    // First run: nothing was in storage yet, so persist the seed data now.
-    if (storedFavorites == null) await _storage.saveFavorites(_favorites);
-    if (storedRoutes == null) await _storage.saveSavedRoutes(_savedRoutes);
+    if (storedRoutes != null) await _storage.saveSavedRoutes(_savedRoutes);
   }
 
-  // --- Dummy seed data -----------------------------------------------------
+  
 
-  static List<FavoriteLocation> _dummyFavorites() => const [
-        FavoriteLocation(
-          id: 'fav-home',
-          type: FavoriteLocationType.home,
-          label: 'Home',
-          location: Location(
-            latitude: 3.1637,
-            longitude: 101.7411,
-            address: '123, Jalan Ampang',
-          ),
+  Future<void> _editSavedRoute(SavedRoute route) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.trip_origin_rounded),
+              title: const Text('Change origin'),
+              onTap: () => Navigator.of(sheetContext).pop('origin'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.location_on_rounded),
+              title: const Text('Change destination'),
+              onTap: () => Navigator.of(sheetContext).pop('destination'),
+            ),
+            ListTile(
+              leading: Icon(
+                route.mode == TravelMode.transit
+                    ? Icons.directions_car_rounded
+                    : Icons.directions_transit_rounded,
+              ),
+              title: Text(
+                route.mode == TravelMode.transit
+                    ? 'Switch to driving'
+                    : 'Switch to transit',
+              ),
+              onTap: () => Navigator.of(sheetContext).pop('mode'),
+            ),
+          ],
         ),
-        FavoriteLocation(
-          id: 'fav-work',
-          type: FavoriteLocationType.work,
-          label: 'Work',
-          location: Location(
-            latitude: 3.1332,
-            longitude: 101.6866,
-            address: 'KL Sentral',
-          ),
-        ),
-      ];
+      ),
+    );
+    if (action == null || !mounted) return;
 
-  /// Origin/destination addresses here are short labels ("Home", "Work",
-  /// "KLCC") rather than full street addresses — matching how the route
-  /// cards display them ("Home → Work"), as distinct from the fuller
-  /// addresses shown on the location cards above.
-  static List<SavedRoute> _dummySavedRoutes() => const [
-        SavedRoute(
-          id: 'route-1',
-          origin: Location(
-            latitude: 3.1637,
-            longitude: 101.7411,
-            address: 'Home',
+    switch (action) {
+      case 'origin':
+        final loc = await _pickLocation(
+          context,
+          initial: route.origin,
+          confirmLabel: 'Change origin',
+        );
+        if (loc != null && mounted) {
+          await _updateSavedRoute(route.copyWith(origin: loc));
+        }
+        break;
+      case 'destination':
+        final loc = await _pickLocation(
+          context,
+          initial: route.destination,
+          confirmLabel: 'Change destination',
+        );
+        if (loc != null && mounted) {
+          await _updateSavedRoute(route.copyWith(destination: loc));
+        }
+        break;
+      case 'mode':
+        await _updateSavedRoute(
+          route.copyWith(
+            mode: route.mode == TravelMode.transit
+                ? TravelMode.driving
+                : TravelMode.transit,
           ),
-          destination: Location(
-            latitude: 3.1332,
-            longitude: 101.6866,
-            address: 'Work',
-          ),
-          mode: TravelMode.transit,
-          cost: 3.0,
-          timeMinutes: 55,
-          savingsPerTripRM: 15,
-        ),
-        SavedRoute(
-          id: 'route-2',
-          origin: Location(
-            latitude: 3.1637,
-            longitude: 101.7411,
-            address: 'Home',
-          ),
-          destination: Location(
-            latitude: 3.1579,
-            longitude: 101.7116,
-            address: 'KLCC',
-          ),
-          mode: TravelMode.transit,
-          cost: 2.5,
-          timeMinutes: 30,
-          savingsPerTripRM: 8,
-        ),
-      ];
-
-  // --- Actions -------------------------------------------------------------
-
-  Future<void> _addFavorite() async {
-    final result = await _showEditFavoriteDialog(context);
-    if (result == null || !mounted) return;
-    setState(() => _favorites = [..._favorites, result]);
-    await _storage.saveFavorites(_favorites);
+        );
+        break;
+    }
   }
 
-  Future<void> _editFavorite(FavoriteLocation favorite) async {
-    final result =
-        await _showEditFavoriteDialog(context, existing: favorite);
-    if (result == null || !mounted) return;
+  Future<void> _updateSavedRoute(SavedRoute updated) async {
     setState(() {
-      _favorites = [
-        for (final f in _favorites) if (f.id == result.id) result else f,
+      _savedRoutes = [
+        for (final r in _savedRoutes) if (r.id == updated.id) updated else r,
       ];
     });
-    await _storage.saveFavorites(_favorites);
+    await _storage.saveSavedRoutes(_savedRoutes);
   }
 
-  Future<void> _deleteFavorite(FavoriteLocation favorite) async {
+  Future<void> _deleteSavedRoute(SavedRoute route) async {
     final confirmed = await _showConfirmDialog(
       context,
-      title: 'Remove ${favorite.label}?',
-      message: 'You can add it again later from the + button.',
+      title: 'Delete this route?',
+      message:
+          '${route.origin.address ?? 'Origin'} → '
+          '${route.destination.address ?? 'Destination'}',
     );
     if (confirmed != true || !mounted) return;
     setState(() {
-      _favorites = _favorites.where((f) => f.id != favorite.id).toList();
+      _savedRoutes = _savedRoutes.where((r) => r.id != route.id).toList();
     });
-    await _storage.saveFavorites(_favorites);
+    await _storage.saveSavedRoutes(_savedRoutes);
   }
 
-  /// Hands the route off to [TripProvider] and opens the Comparison page —
-  /// [ComparisonPage] reads its origin/destination from [TripProvider]
-  /// rather than route arguments, so this mirrors how the rest of the app
-  /// (e.g. the homepage shortcut chips) starts a comparison.
+  Future<void> _setPlace({required bool isHome}) async {
+    final tripProvider = context.read<TripProvider>();
+    final label = isHome ? 'Home' : 'Work';
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SearchDestinationPage(
+          confirmLabel: 'Save as $label',
+          onPlacePicked: (location) async {
+            if (isHome) {
+              tripProvider.setHome(location);
+            } else {
+              tripProvider.setWork(location);
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  void _removePlace({required bool isHome}) {
+    final tripProvider = context.read<TripProvider>();
+    if (isHome) {
+      tripProvider.clearHome();
+    } else {
+      tripProvider.clearWork();
+    }
+  }
+
+  
+  
+  
+  
   void _planRoute(SavedRoute route) {
     final tripProvider = context.read<TripProvider>();
     tripProvider.setOrigin(route.origin);
@@ -170,6 +184,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final tripProvider = context.watch<TripProvider>();
+
     if (_isLoading) {
       return const Scaffold(
         body: Center(
@@ -179,12 +195,6 @@ class _FavoritesPageState extends State<FavoritesPage> {
     }
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addFavorite,
-        backgroundColor: AppColors.primary,
-        tooltip: 'Add favorite',
-        child: const Icon(Icons.add_rounded, color: Colors.white),
-      ),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -203,23 +213,22 @@ class _FavoritesPageState extends State<FavoritesPage> {
                     children: [
                       _buildHeader(),
                       const SizedBox(height: 20),
-                      const _SectionLabel('Saved Locations'),
+                      _HomeWorkCard(
+                        icon: Icons.home_rounded,
+                        label: 'Home',
+                        location: tripProvider.home,
+                        onTap: () => _setPlace(isHome: true),
+                        onRemove: () => _removePlace(isHome: true),
+                      ),
                       const SizedBox(height: 10),
-                      if (_favorites.isEmpty)
-                        const _EmptyState(
-                          icon: Icons.location_off_outlined,
-                          message: 'No saved locations yet.',
-                        )
-                      else
-                        for (final favorite in _favorites) ...[
-                          FavoriteLocationCard(
-                            favorite: favorite,
-                            onEdit: () => _editFavorite(favorite),
-                            onDelete: () => _deleteFavorite(favorite),
-                          ),
-                          const SizedBox(height: 10),
-                        ],
-                      const SizedBox(height: 14),
+                      _HomeWorkCard(
+                        icon: Icons.work_outline_rounded,
+                        label: 'Work',
+                        location: tripProvider.work,
+                        onTap: () => _setPlace(isHome: false),
+                        onRemove: () => _removePlace(isHome: false),
+                      ),
+                      const SizedBox(height: 20),
                       const _SectionLabel('Saved Routes'),
                       const SizedBox(height: 10),
                       if (_savedRoutes.isEmpty)
@@ -233,10 +242,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
                           SavedRouteCard(
                             route: route,
                             onPlanRoute: () => _planRoute(route),
-                            onTap: () => Navigator.of(context).pushNamed(
-                              AppRoutes.savedRouteComparison,
-                              arguments: route,
-                            ),
+                            onEdit: () => _editSavedRoute(route),
+                            onDelete: () => _deleteSavedRoute(route),
                           ),
                           const SizedBox(height: 10),
                         ],
@@ -286,89 +293,31 @@ class _FavoritesPageState extends State<FavoritesPage> {
   }
 }
 
-// --- Dialogs ---------------------------------------------------------------
 
-/// Shows a dialog to add a new favorite, or edit [existing] if provided.
-///
-/// Returns the created/updated [FavoriteLocation], or `null` if cancelled.
-Future<FavoriteLocation?> _showEditFavoriteDialog(
+
+
+
+Future<Location?> _pickLocation(
   BuildContext context, {
-  FavoriteLocation? existing,
-}) {
-  final labelController = TextEditingController(text: existing?.label ?? '');
-  final addressController = TextEditingController(
-    text: existing?.location.address ?? '',
-  );
-  final formKey = GlobalKey<FormState>();
-
-  return showDialog<FavoriteLocation>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Text(
-        existing == null ? 'Add favorite' : 'Edit favorite',
-        style: const TextStyle(fontWeight: FontWeight.w700),
+  Location? initial,
+  required String confirmLabel,
+}) async {
+  Location? picked;
+  await Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => SearchDestinationPage(
+        initialLocation: initial,
+        confirmLabel: confirmLabel,
+        onPlacePicked: (location) async {
+          picked = location;
+        },
       ),
-      content: Form(
-        key: formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: labelController,
-              decoration: const InputDecoration(labelText: 'Name'),
-              validator: (value) => (value == null || value.trim().isEmpty)
-                  ? 'Enter a name'
-                  : null,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: addressController,
-              decoration: const InputDecoration(labelText: 'Address'),
-              validator: (value) => (value == null || value.trim().isEmpty)
-                  ? 'Enter an address'
-                  : null,
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          onPressed: () {
-            if (!(formKey.currentState?.validate() ?? false)) return;
-            final updated = FavoriteLocation(
-              id: existing?.id ?? 'fav-${DateTime.now().millisecondsSinceEpoch}',
-              type: existing?.type ?? FavoriteLocationType.custom,
-              label: labelController.text.trim(),
-              location: Location(
-                latitude: existing?.location.latitude ?? 0,
-                longitude: existing?.location.longitude ?? 0,
-                address: addressController.text.trim(),
-              ),
-            );
-            Navigator.of(dialogContext).pop(updated);
-          },
-          child: const Text('Save'),
-        ),
-      ],
     ),
-  ).whenComplete(() {
-    labelController.dispose();
-    addressController.dispose();
-  });
+  );
+  return picked;
 }
 
-/// Shows a Yes/No confirmation dialog. Returns `true` if confirmed.
+
 Future<bool?> _showConfirmDialog(
   BuildContext context, {
   required String title,
@@ -400,9 +349,9 @@ Future<bool?> _showConfirmDialog(
   );
 }
 
-// --- Small private widgets --------------------------------------------------
 
-/// Small uppercase section label used above the Locations/Routes lists.
+
+
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
 
@@ -422,7 +371,7 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-/// Placeholder shown when a list has no items yet.
+
 class _EmptyState extends StatelessWidget {
   const _EmptyState({required this.icon, required this.message});
 
@@ -449,6 +398,102 @@ class _EmptyState extends StatelessWidget {
             style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+class _HomeWorkCard extends StatelessWidget {
+  const _HomeWorkCard({
+    required this.icon,
+    required this.label,
+    required this.location,
+    required this.onTap,
+    required this.onRemove,
+  });
+
+  final IconData icon;
+  final String label;
+  final Location? location;
+  final VoidCallback onTap;
+  final VoidCallback onRemove;
+
+  Color get _color =>
+      icon == Icons.home_rounded ? AppColors.primary : AppColors.success;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 14,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: _color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: _color, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    location?.address ?? 'Not set — tap to choose',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: location != null
+                          ? AppColors.textSecondary
+                          : AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (location != null)
+              IconButton(
+                icon: const Icon(Icons.close_rounded, size: 18),
+                color: AppColors.textMuted,
+                onPressed: onRemove,
+              ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: AppColors.textMuted,
+            ),
+          ],
+        ),
       ),
     );
   }

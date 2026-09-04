@@ -11,14 +11,9 @@ import '../utils/helpers.dart';
 import '../utils/weather_utils.dart';
 import '../widgets/widgets.dart';
 
-/// Compares transit and driving options between the selected origin
-/// and destination, then recommends the best mode.
-///
-/// Uses Google Directions API transit mode as the primary transit router
-/// (handles walking to/from stations, transfers, and correct line names).
-/// GTFS is used as a fallback and for real-time enrichment.
+
 class ComparisonPage extends StatefulWidget {
-  /// Creates a [ComparisonPage].
+  
   const ComparisonPage({super.key});
 
   @override
@@ -38,19 +33,29 @@ class _ComparisonPageState extends State<ComparisonPage> {
 
   TravelMode? _selectedMode;
   Comparison? _comparison;
+  bool _isRouteSaved = false;
 
-  /// Transit step details (line name, stops, vehicle type) for the best route.
+  double _fuelCostRon95 = 0;
+  double _fuelCostRon97 = 0;
+  double _fuelCostDiesel = 0;
+  FuelPrice? _fuelPrice;
+
+  
   List<DirectionsStepInfo>? _transitStepInfos;
+
+  late final SettingsService _settings = context.read<SettingsService>();
 
   @override
   void initState() {
     super.initState();
-    // Defer fetch to next frame so context is ready.
+    
     WidgetsBinding.instance.addPostFrameCallback((_) => _fetchAll());
+    _settings.addListener(_onSettingsChanged);
   }
 
-  /// Fetches all data needed for the comparison in parallel.
+  
   Future<void> _fetchAll() async {
+    if (!mounted) return;
     final tripProvider = context.read<TripProvider>();
     final origin = tripProvider.origin;
     final destination = tripProvider.destination;
@@ -65,38 +70,96 @@ class _ComparisonPageState extends State<ComparisonPage> {
       return;
     }
 
+    
+    if (!isInMalaysia(origin)) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'Origin is outside Malaysia. '
+              'Please choose a location within Malaysia.';
+        });
+      }
+      return;
+    }
+    if (!isInMalaysia(destination)) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'Destination is outside Malaysia. '
+              'Please choose a location within Malaysia.';
+        });
+      }
+      return;
+    }
+
     final gtfsService = context.read<GTFSService>();
     final mapsService = context.read<GoogleMapsService>();
     final fuelService = context.read<FuelPriceService>();
     final weatherService = context.read<WeatherService>();
+    final settings = context.read<SettingsService>();
 
     try {
-      // Parallel fetch everything.
+      
       final results = await Future.wait([
         _fetchTransitRoutes(mapsService, gtfsService, origin, destination),
         mapsService.getDistanceMatrix(origin, destination),
         fuelService.getFuelPrice(),
-        weatherService.getForecast(origin.latitude, origin.longitude),
-        weatherService.getForecast(destination.latitude, destination.longitude),
       ]);
 
       final transitRoutes = results[0] as List<TransitRoute>;
       final distanceMatrix = results[1] as DistanceMatrix;
       final fuelPrice = results[2] as FuelPrice;
-      final originForecasts = results[3] as List<Weather>;
-      final destinationForecasts = results[4] as List<Weather>;
 
-      // Build driving route.
+      
+      const maxSeconds = 10 * 3600;
+      final transitTooLong = transitRoutes.isNotEmpty &&
+          transitRoutes.first.durationMinutes > 600;
+      if (distanceMatrix.durationSeconds > maxSeconds || transitTooLong) {
+        if (mounted) {
+          setState(() {
+            _loading = false;
+            _error = 'Route is too long (over 10 hours). '
+                'Please choose a closer destination.';
+          });
+        }
+        return;
+      }
+
+      
+      List<Weather> originForecasts = [];
+      List<Weather> destinationForecasts = [];
+      try {
+        originForecasts = await weatherService.getForecast(
+          origin.latitude,
+          origin.longitude,
+        );
+      } catch (_) {}
+      try {
+        destinationForecasts = await weatherService.getForecast(
+          destination.latitude,
+          destination.longitude,
+        );
+      } catch (_) {}
+
+      
       final distanceKm = distanceMatrix.distanceMeters / 1000.0;
-      final fuelCost = distanceKm * Defaults.fuelConsumptionPerKm * fuelPrice.ron95;
+      final consumption = settings.fuelConsumptionPerKm;
+      final fuelCostRon95 = distanceKm * consumption * fuelPrice.ron95;
+      final fuelCostRon97 = distanceKm * consumption * fuelPrice.ron97;
+      final fuelCostDiesel = distanceKm * consumption * fuelPrice.diesel;
+      final pricePerLitre = switch (settings.fuelType) {
+        FuelType.ron95 => fuelPrice.ron95,
+        FuelType.ron97 => fuelPrice.ron97,
+        FuelType.diesel => fuelPrice.diesel,
+      };
+      final fuelCost = distanceKm * consumption * pricePerLitre;
       final drivingRoute = DrivingRoute(
         distanceMeters: distanceMatrix.distanceMeters,
         durationSeconds: distanceMatrix.durationSeconds,
-        tolls: distanceMatrix.tolls,
         fuelCost: fuelCost,
       );
 
-      // Compute recommendation.
+      
       final recommendation = _computeRecommendation(
         transitRoutes: transitRoutes,
         drivingRoute: drivingRoute,
@@ -112,11 +175,15 @@ class _ComparisonPageState extends State<ComparisonPage> {
           _destinationWeather = destinationForecasts.isNotEmpty ? destinationForecasts.first : null;
           _recommendation = recommendation.$1;
           _recommendationReason = recommendation.$2;
+          _fuelCostRon95 = fuelCostRon95;
+          _fuelCostRon97 = fuelCostRon97;
+          _fuelCostDiesel = fuelCostDiesel;
+          _fuelPrice = fuelPrice;
           _loading = false;
         });
       }
 
-      // Build comparison object for persistence.
+      
       final bestTransit = transitRoutes.isNotEmpty ? transitRoutes.first : TransitRoute(
         id: 'none',
         name: 'No transit',
@@ -135,6 +202,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
         recommendationReason: recommendation.$2,
         weather: originForecasts.isNotEmpty ? originForecasts.first : null,
       );
+      await _checkRouteSaved();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -148,12 +216,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
     }
   }
 
-  /// Fetches transit routes between origin and destination.
-  ///
-  /// **Primary:** Uses Google Directions API in transit mode which handles
-  /// walking to/from stations, line names, transfers, and polyline routes.
-  ///
-  /// **Fallback:** If Directions API fails, tries GTFS static feeds.
+
   Future<List<TransitRoute>> _fetchTransitRoutes(
     GoogleMapsService mapsService,
     GTFSService gtfsService,
@@ -161,7 +224,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
     Location destination,
   ) async {
     try {
-      // Primary: Google Directions API transit mode.
+      
       final transitResults = await mapsService.getTransitRoutes(
         origin,
         destination,
@@ -172,7 +235,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
         routes.add(_directionsToTransitRoute(result));
       }
 
-      // Store transit step infos from the best (first) route for leg display.
+      
       if (transitResults.isNotEmpty) {
         _transitStepInfos = transitResults.first.stepInfos
             .where((s) => s.travelMode == 'TRANSIT')
@@ -181,16 +244,16 @@ class _ComparisonPageState extends State<ComparisonPage> {
 
       if (routes.isNotEmpty) return routes;
     } catch (_) {
-      // Fall through to GTFS fallback.
+      
     }
 
-    // Fallback: GTFS static feeds.
+    
     return _fetchGTFSRoutes(gtfsService, origin, destination);
   }
 
-  /// Converts a [DirectionsResult] from transit mode into a [TransitRoute].
+  
   TransitRoute _directionsToTransitRoute(DirectionsResult result) {
-    // Separate walking and transit steps.
+    
     final walkingSteps = <DirectionsStepInfo>[];
     final transitSteps = <DirectionsStepInfo>[];
     for (final step in result.stepInfos) {
@@ -201,7 +264,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
       }
     }
 
-    // Calculate walking distance/time.
+    
     final totalWalkingMeters = walkingSteps.fold<int>(
       0, (sum, s) => sum + s.distanceMeters,
     );
@@ -209,7 +272,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
       0, (sum, s) => sum + s.durationSeconds,
     );
 
-    // Build the route name from transit lines.
+    
     final lineNames = transitSteps
         .map((s) => s.transitInfo?.lineName ?? '')
         .where((n) => n.isNotEmpty)
@@ -218,12 +281,12 @@ class _ComparisonPageState extends State<ComparisonPage> {
         ? lineNames.join(' → ')
         : 'Transit Route';
 
-    // Determine the primary transit mode from vehicle type.
+    
     final primaryType = transitSteps.isNotEmpty
         ? _mapVehicleType(transitSteps.first.transitInfo?.vehicleType ?? '')
         : TransitMode.unknown;
 
-    // Build detail strings for the comparison card.
+    
     final details = <String>[];
     if (totalWalkingMeters > 0) {
       final walkMin = (totalWalkingSeconds / 60).ceil();
@@ -243,11 +306,11 @@ class _ComparisonPageState extends State<ComparisonPage> {
       details.addAll(result.steps);
     }
 
-    // Estimate fare based on distance and mode.
+    
     final distanceKm = result.distanceMeters / 1000.0;
     final fare = _estimateFare(primaryType, distanceKm);
 
-    // Build synthetic GTFS stops from Directions data.
+    
     final stops = <GTFSStop>[];
     final firstDeparture = transitSteps.isNotEmpty
         ? transitSteps.first.transitInfo?.departureStop
@@ -284,7 +347,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
     );
   }
 
-  /// Maps a Google vehicle type string to our [TransitMode].
+  
   TransitMode _mapVehicleType(String vehicleType) {
     switch (vehicleType.toUpperCase()) {
       case 'BUS':
@@ -307,7 +370,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
     }
   }
 
-  /// Estimates fare in MYR based on transit mode and distance.
+  
   double _estimateFare(TransitMode mode, double distanceKm) {
     switch (mode) {
       case TransitMode.bus:
@@ -323,7 +386,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
     }
   }
 
-  /// Fallback: fetches transit routes from multiple GTFS agencies.
+  
   Future<List<TransitRoute>> _fetchGTFSRoutes(
     GTFSService service,
     Location origin,
@@ -347,7 +410,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
     final results = await Future.wait(futures);
     final allRoutes = results.expand((r) => r).toList();
 
-    // Deduplicate by route ID and sort by duration.
+    
     final seen = <String>{};
     final unique = <TransitRoute>[];
     for (final route in allRoutes) {
@@ -359,14 +422,14 @@ class _ComparisonPageState extends State<ComparisonPage> {
     return unique;
   }
 
-  /// Computes the recommendation based on cost, time, and weather.
+  
   (Recommendation, String) _computeRecommendation({
     required List<TransitRoute> transitRoutes,
     required DrivingRoute drivingRoute,
     required Weather? originWeather,
     required Weather? destinationWeather,
   }) {
-    // No transit routes available.
+    
     if (transitRoutes.isEmpty) {
       return (
         Recommendation.driving,
@@ -376,83 +439,80 @@ class _ComparisonPageState extends State<ComparisonPage> {
 
     final bestTransit = transitRoutes.first;
     final drivingMinutes = drivingRoute.durationSeconds ~/ 60;
-    final drivingTotalCost = drivingRoute.fuelCost + drivingRoute.tolls;
+    final drivingTotalCost = drivingRoute.fuelCost;
     final savingRM = (drivingTotalCost - bestTransit.fare).abs();
     final timeDeltaMin = (bestTransit.durationMinutes - drivingMinutes).abs();
     final savingText = formatCurrency(savingRM);
 
+    final settings = context.read<SettingsService>();
+    final cheapest = settings.defaultMode == DefaultTravelMode.cheapest;
     final hasRain = _hasRainForecast(originWeather, destinationWeather);
 
-    // Score each option (lower = better): cost weight + time weight.
-    final transitScore = bestTransit.fare * 2 + bestTransit.durationMinutes;
-    final drivingScore = drivingTotalCost * 2 + drivingMinutes;
-    final transitWins = transitScore <= drivingScore;
-
-    if (hasRain) {
-      // Rain → transit always preferred (avoids driving in rain).
-      if (transitWins) {
-        return (
-          Recommendation.transit,
-          "It's raining — transit avoids traffic delays · saves $savingText vs driving",
-        );
-      }
-      return (
-        Recommendation.transit,
-        "It's raining — transit avoids traffic delays",
-      );
+    final bool transitWins;
+    if (cheapest) {
+      transitWins = bestTransit.fare < drivingTotalCost ||
+          (bestTransit.fare == drivingTotalCost &&
+              bestTransit.durationMinutes <= drivingMinutes);
+    } else if (hasRain) {
+      
+      
+      transitWins = bestTransit.durationMinutes <= drivingMinutes + 10;
+    } else {
+      transitWins = bestTransit.durationMinutes < drivingMinutes ||
+          (bestTransit.durationMinutes == drivingMinutes &&
+              bestTransit.fare <= drivingTotalCost);
     }
 
     if (transitWins) {
+      if (cheapest) {
+        return (
+          Recommendation.transit,
+          'Cheapest option — saves $savingText vs driving',
+        );
+      }
+      if (hasRain && bestTransit.durationMinutes > drivingMinutes) {
+        return (
+          Recommendation.transit,
+          "It's raining — transit is only "
+              '${bestTransit.durationMinutes - drivingMinutes} min slower '
+              'than driving, recommended',
+        );
+      }
       if (timeDeltaMin == 0) {
         return (
           Recommendation.transit,
-          'Saves $savingText vs driving · same time',
-        );
-      }
-      if (bestTransit.durationMinutes <= drivingMinutes) {
-        return (
-          Recommendation.transit,
-          'Saves $savingText vs driving · $timeDeltaMin min faster',
+          hasRain
+              ? "Fastest option — same time as driving · It's raining, transit avoids traffic"
+              : 'Fastest option — same time as driving',
         );
       }
       return (
         Recommendation.transit,
-        'Saves $savingText vs driving · only $timeDeltaMin min slower',
+        hasRain
+            ? "Fastest option — $timeDeltaMin min faster than driving · It's raining, transit avoids traffic"
+            : 'Fastest option — $timeDeltaMin min faster than driving',
       );
     }
 
-    // Driving wins on combined cost + time.
-    if (drivingTotalCost < bestTransit.fare) {
-      if (timeDeltaMin == 0) {
-        return (
-          Recommendation.driving,
-          'Saves $savingText vs transit · same time',
-        );
-      }
-      if (drivingMinutes < bestTransit.durationMinutes) {
-        return (
-          Recommendation.driving,
-          'Saves $timeDeltaMin min and $savingText vs transit',
-        );
-      }
+    if (cheapest) {
       return (
         Recommendation.driving,
-        'Saves $savingText vs transit',
+        'Cheapest option — saves $savingText vs transit',
       );
     }
-    if (drivingMinutes < bestTransit.durationMinutes) {
+    if (timeDeltaMin == 0) {
       return (
         Recommendation.driving,
-        'Saves $timeDeltaMin min vs transit',
+        'Fastest option — same time as transit',
       );
     }
     return (
       Recommendation.driving,
-      'Driving is more convenient for this route',
+      'Fastest option — $timeDeltaMin min faster than transit',
     );
   }
 
-  /// Checks if origin or destination is raining now.
+  
   bool _hasRainForecast(Weather? origin, Weather? destination) {
     for (final w in [origin, destination]) {
       if (w == null) continue;
@@ -461,7 +521,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
     return false;
   }
 
-  /// Called when the user taps a comparison card.
+  
   void _selectMode(TravelMode mode) {
     setState(() {
       _selectedMode = mode;
@@ -470,10 +530,114 @@ class _ComparisonPageState extends State<ComparisonPage> {
 
   @override
   void dispose() {
+    _settings.removeListener(_onSettingsChanged);
     super.dispose();
   }
 
-  /// Navigates to route details with the selected option.
+  
+  void _onSettingsChanged() {
+    final fuelPrice = _fuelPrice;
+    final driving = _drivingRoute;
+    if (fuelPrice == null || driving == null || !mounted) return;
+    final settings = context.read<SettingsService>();
+    final distanceKm = driving.distanceMeters / 1000.0;
+    final consumption = settings.fuelConsumptionPerKm;
+    final fuelCostRon95 = distanceKm * consumption * fuelPrice.ron95;
+    final fuelCostRon97 = distanceKm * consumption * fuelPrice.ron97;
+    final fuelCostDiesel = distanceKm * consumption * fuelPrice.diesel;
+    final pricePerLitre = switch (settings.fuelType) {
+      FuelType.ron95 => fuelPrice.ron95,
+      FuelType.ron97 => fuelPrice.ron97,
+      FuelType.diesel => fuelPrice.diesel,
+    };
+    final fuelCost = distanceKm * consumption * pricePerLitre;
+    final newDrivingRoute = DrivingRoute(
+      distanceMeters: driving.distanceMeters,
+      durationSeconds: driving.durationSeconds,
+      fuelCost: fuelCost,
+    );
+    final recommendation = _computeRecommendation(
+      transitRoutes: _transitRoutes,
+      drivingRoute: newDrivingRoute,
+      originWeather: _originWeather,
+      destinationWeather: _destinationWeather,
+    );
+    setState(() {
+      _fuelCostRon95 = fuelCostRon95;
+      _fuelCostRon97 = fuelCostRon97;
+      _fuelCostDiesel = fuelCostDiesel;
+      _drivingRoute = newDrivingRoute;
+      _recommendation = recommendation.$1;
+      _recommendationReason = recommendation.$2;
+    });
+  }
+
+  
+  Future<void> _checkRouteSaved() async {
+    final comparison = _comparison;
+    if (comparison == null) return;
+    final storage = LocalStorageService();
+    final saved = await storage.loadSavedRoutes() ?? const [];
+    final alreadySaved = saved.any(
+      (r) =>
+          isSameLocation(r.origin, comparison.origin) &&
+          isSameLocation(r.destination, comparison.destination),
+    );
+    if (!mounted) return;
+    if (_isRouteSaved != alreadySaved) {
+      setState(() => _isRouteSaved = alreadySaved);
+    }
+  }
+
+  
+  Future<void> _saveRoute() async {
+    final comparison = _comparison;
+    if (comparison == null) return;
+
+    if (_isRouteSaved) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Route is already saved')),
+      );
+      return;
+    }
+
+    final transit = comparison.transitOption;
+    final driving = comparison.drivingOption;
+    final mode = comparison.recommendation == Recommendation.transit
+        ? TravelMode.transit
+        : TravelMode.driving;
+    final cost = mode == TravelMode.transit ? transit.fare : driving.fuelCost;
+    final timeMinutes = mode == TravelMode.transit
+        ? transit.durationMinutes
+        : (driving.durationSeconds / 60).round();
+    final route = SavedRoute(
+      id: 'route-${DateTime.now().millisecondsSinceEpoch}',
+      origin: comparison.origin,
+      destination: comparison.destination,
+      mode: mode,
+      cost: cost,
+      timeMinutes: timeMinutes,
+      savingsPerTripRM: (transit.fare - driving.fuelCost).abs(),
+    );
+
+    final storage = LocalStorageService();
+    final existing = await storage.loadSavedRoutes() ?? [];
+    final filtered = existing
+        .where((r) =>
+            !isSameLocation(r.origin, route.origin) ||
+            !isSameLocation(r.destination, route.destination))
+        .toList();
+    await storage.saveSavedRoutes([...filtered, route]);
+
+    if (!mounted) return;
+    setState(() => _isRouteSaved = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Route saved to Favorites')),
+    );
+  }
+
+  
   void _onSelectRoute() {
     if (_selectedMode == null) return;
 
@@ -481,10 +645,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
     final origin = tripProvider.origin!;
     final destination = tripProvider.destination!;
 
-    // If the user picked a specific from-location (not their current
-    // position), route from the current location first, then to the
-    // from-location, then continue to the destination. The from-location
-    // is marked as the journey's start point.
+
     final currentLoc = tripProvider.currentLocation;
     final via = (currentLoc != null && !isSameLocation(currentLoc, origin))
         ? origin
@@ -531,11 +692,11 @@ class _ComparisonPageState extends State<ComparisonPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header.
+            
             _buildHeader(origin, destination),
             const SizedBox(height: 4),
 
-            // Content.
+            
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
@@ -544,7 +705,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
                       : _buildComparisonBody(),
             ),
 
-            // Bottom action button.
+            
             if (!_loading && _error == null)
               _buildBottomButton(),
           ],
@@ -559,7 +720,14 @@ class _ComparisonPageState extends State<ComparisonPage> {
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
+            onTap: () {
+              final navigator = Navigator.of(context);
+              if (navigator.canPop()) {
+                navigator.pop();
+              } else {
+                navigator.pushReplacementNamed(AppRoutes.home);
+              }
+            },
             child: Container(
               width: 40,
               height: 40,
@@ -599,6 +767,28 @@ class _ComparisonPageState extends State<ComparisonPage> {
                   ),
                 ),
               ],
+            ),
+          ),
+          
+          GestureDetector(
+            onTap: _saveRoute,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Icon(
+                _isRouteSaved
+                    ? Icons.bookmark_added_rounded
+                    : Icons.bookmark_add_outlined,
+                color: _isRouteSaved
+                    ? AppColors.primary
+                    : AppColors.textPrimary,
+                size: 20,
+              ),
             ),
           ),
         ],
@@ -652,6 +842,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
   }
 
   Widget _buildComparisonBody() {
+    final settings = context.watch<SettingsService>();
     final bestTransit = _transitRoutes.isNotEmpty ? _transitRoutes.first : null;
     final driving = _drivingRoute;
 
@@ -661,14 +852,14 @@ class _ComparisonPageState extends State<ComparisonPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Weather banner.
+          
           WeatherStatusWidget(
             originWeather: _originWeather,
             destinationWeather: _destinationWeather,
           ),
           const SizedBox(height: 16),
 
-          // Transit card.
+          
           if (bestTransit != null) ...[
             ComparisonCard(
               title: bestTransit.name,
@@ -684,7 +875,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
                 if (bestTransit.stops.length > 1)
                   'To: ${bestTransit.stops.last.stopName}',
                 if (_recommendation == Recommendation.transit)
-                  '✓ Recommended: $_recommendationReason',
+                  'Recommended: $_recommendationReason',
               ],
               accentColor: AppColors.success,
               isRecommended: _recommendation == Recommendation.transit,
@@ -693,7 +884,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
             ),
             const SizedBox(height: 14),
 
-            // Transit legs — shown when transit is selected.
+            
             if (_selectedMode == TravelMode.transit && _transitStepInfos != null)
               _buildTransitLegs(),
           ] else ...[
@@ -701,20 +892,19 @@ class _ComparisonPageState extends State<ComparisonPage> {
             const SizedBox(height: 14),
           ],
 
-          // Driving card.
+          
           if (driving != null) ...[
             ComparisonCard(
               title: 'Driving',
               icon: Icons.directions_car_rounded,
-              cost: formatCurrency(driving.fuelCost + driving.tolls),
+              cost: formatCurrency(driving.fuelCost),
               time: formatDuration(driving.durationSeconds ~/ 60),
               details: [
                 'Distance: ${(driving.distanceMeters / 1000).toStringAsFixed(1)} km',
-                'Fuel cost: ${formatCurrency(driving.fuelCost)}',
-                'Tolls: ${formatCurrency(driving.tolls)}',
-                'Based on current RON95 price',
+                'Fuel cost (${settings.fuelType.displayName}): ${formatCurrency(driving.fuelCost)}',
+                'RON95 ${formatCurrency(_fuelCostRon95)} · RON97 ${formatCurrency(_fuelCostRon97)} · Diesel ${formatCurrency(_fuelCostDiesel)}',
                 if (_recommendation == Recommendation.driving)
-                  '✓ Recommended: $_recommendationReason',
+                  'Recommended: $_recommendationReason',
               ],
               accentColor: AppColors.primary,
               isRecommended: _recommendation == Recommendation.driving,
@@ -730,7 +920,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
     );
   }
 
-  /// Shows the transit legs (e.g. Bus → MRT) the user will ride on.
+  
   Widget _buildTransitLegs() {
     final legs = _transitStepInfos!;
     if (legs.isEmpty) return const SizedBox.shrink();
@@ -769,7 +959,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Timeline connector.
+                
                 SizedBox(
                   width: 32,
                   child: Column(
@@ -833,7 +1023,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
     );
   }
 
-  /// Maps a Google vehicle type to an icon for transit leg display.
+  
   IconData _transitVehicleIcon(String vehicleType) {
     switch (vehicleType.toUpperCase()) {
       case 'BUS':

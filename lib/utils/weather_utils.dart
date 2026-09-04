@@ -1,8 +1,5 @@
 import '../models/models.dart';
 
-/// Returns true when the Malay summary string describes actual rain.
-///
-/// Correctly excludes negated phrases like "Tiada Hujan" (No rain).
 bool isRaining(String summary) {
   final lower = summary.toLowerCase();
   if (lower.contains('tiada hujan') || lower.contains('tiada ribut')) {
@@ -44,6 +41,14 @@ String translateWeather(String text) {
   if (lower == 'mendung') return 'Cloudy';
   if (lower == 'berawan') return 'Cloudy';
   if (lower == 'berangin') return 'Windy';
+  if (lower == 'jerebu') return 'Haze';
+  if (lower == 'berjerebu') return 'Hazy';
+  if (lower == 'hujan di beberapa tempat') return 'Rain in some places';
+  if (lower == 'ribut petir di beberapa tempat') {
+    return 'Thunderstorms in some places';
+  }
+  if (lower == 'berjerebu di beberapa tempat') return 'Hazy in some places';
+  if (lower == 'hujan berterusan') return 'Continuous rain';
 
   // Fallback: replace individual keywords so partial matches still work.
   var result = text;
@@ -64,10 +69,24 @@ String translateWeather(String text) {
     'Panas': 'Hot',
     'Kabus': 'Foggy',
     'Berangin': 'Windy',
+    'Jerebu': 'Haze',
+    'Berjerebu': 'Hazy',
     'Pagi': 'Morning',
     'Petang': 'Evening',
     'Malam': 'Night',
     'Tengahari': 'Afternoon',
+    'di beberapa tempat': 'in some places',
+    'berterusan': 'continuous',
+    'pada sebelah pagi': 'in the morning',
+    'pada sebelah petang': 'in the afternoon',
+    'pada sebelah malam': 'at night',
+    'pada waktu pagi': 'in the morning',
+    'pada waktu petang': 'in the afternoon',
+    'pada waktu malam': 'at night',
+    'kebanyakkan tempat': 'most places',
+    'di kawasan': 'in the area',
+    'berlaku': 'occurring',
+    'berkemungkinan': 'likely',
   };
   for (final entry in replacements.entries) {
     result = result.replaceAll(entry.key, entry.value);

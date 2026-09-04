@@ -2,34 +2,23 @@ import 'package:flutter/material.dart';
 
 /// Base URLs for all external APIs used by the app.
 abstract class ApiUrls {
-  /// data.gov.my GTFS static feed endpoint.
-  ///
-  /// Append the agency slug, e.g. `gtfsStaticBaseUrl/ktmb`.
+  
   static const String gtfsStaticBaseUrl =
       'https://api.data.gov.my/gtfs-static';
 
-  /// data.gov.my GTFS realtime vehicle position endpoint.
-  ///
-  /// Append the agency slug, e.g. `gtfsRealtimeBaseUrl/ktmb`.
+
   static const String gtfsRealtimeBaseUrl =
       'https://api.data.gov.my/gtfs-realtime/vehicle-position';
 
-  /// data.gov.my weather forecast endpoint (returns all districts).
+
   static const String weatherForecastUrl =
       'https://api.data.gov.my/weather/forecast';
-
-  /// data.gov.my weather warning endpoint.
-  static const String weatherWarningUrl =
-      'https://api.data.gov.my/weather/warning';
 
   /// data.gov.my earthquake warning endpoint.
   static const String earthquakeWarningUrl =
       'https://api.data.gov.my/weather/warning/earthquake';
 
-  /// data.gov.my fuel price catalogue endpoint.
-  ///
-  /// Sorts by date descending and filters for price levels (not weekly
-  /// changes) so the first result is always the most recent price.
+
   static const String fuelPriceBaseUrl =
       'https://api.data.gov.my/data-catalogue?id=fuelprice&sort=-date&series_type=level';
 
@@ -70,9 +59,7 @@ abstract class ApiUrls {
       'https://archive-api.open-meteo.com/v1/archive';
 }
 
-/// Google Maps API configuration.
-///
-/// TODO: Move this key to `--dart-define` or `flutter_dotenv` before release.
+
 abstract class GoogleMapsConfig {
   /// API key for Google Maps web services.
   static const String apiKey = 'AIzaSyCwHiN8ZHF35vGGxYfvid1mR_bD_6Ay1zk';

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
@@ -7,11 +8,7 @@ import 'package:http/http.dart' as http;
 import '../models/models.dart';
 import '../utils/constants.dart';
 
-/// Service responsible for Google Maps web service APIs (REST fallback).
-///
-/// For Place Autocomplete use [NativePlacesService] instead.
-/// This service handles Place Details, Distance Matrix, and Nearby Search
-/// which are not available through the native Places SDK.
+
 class GoogleMapsService {
   /// Creates a [GoogleMapsService].
   ///
@@ -20,33 +17,39 @@ class GoogleMapsService {
 
   final http.Client _client;
 
-  /// Returns a human-readable emoji for a list of Google Places [types].
+  /// Returns a Material icon for a list of Google Places [types].
   ///
   /// Used by [PopularPlacesWidget] to display a category icon for each
   /// nearby place card.
-  static String categoryEmoji(List<String> types) {
+  static IconData categoryIcon(List<String> types) {
     for (final t in types) {
       if (t == 'restaurant' || t == 'meal_takeaway' || t == 'meal_delivery') {
-        return '🍽️';
+        return Icons.restaurant_rounded;
       }
-      if (t == 'cafe' || t == 'bakery') return '☕';
+      if (t == 'cafe' || t == 'bakery') return Icons.local_cafe_rounded;
       if (t == 'subway_station' ||
           t == 'transit_station' ||
           t == 'train_station') {
-        return '🚇';
+        return Icons.directions_transit_rounded;
       }
-      if (t == 'bus_station' || t == 'bus_stop') return '🚌';
-      if (t == 'shopping_mall' || t == 'store') return '🛍️';
-      if (t == 'hospital' || t == 'health') return '🏥';
-      if (t == 'gas_station') return '⛽';
-      if (t == 'park' || t == 'parking') return '🅿️';
-      if (t == 'car_repair') return '🔧';
-      if (t == 'atm' || t == 'bank') return '🏧';
-      if (t == 'pharmacy') return '💊';
-      if (t == 'electric_vehicle_charging_station') return '🔌';
-      if (t == 'museum' || t == 'art_gallery') return '🏛️';
+      if (t == 'bus_station' || t == 'bus_stop') {
+        return Icons.directions_bus_rounded;
+      }
+      if (t == 'shopping_mall' || t == 'store') {
+        return Icons.shopping_bag_rounded;
+      }
+      if (t == 'hospital' || t == 'health') return Icons.local_hospital_rounded;
+      if (t == 'gas_station') return Icons.local_gas_station_rounded;
+      if (t == 'park' || t == 'parking') return Icons.local_parking_rounded;
+      if (t == 'car_repair') return Icons.build_rounded;
+      if (t == 'atm' || t == 'bank') return Icons.account_balance_rounded;
+      if (t == 'pharmacy') return Icons.local_pharmacy_rounded;
+      if (t == 'electric_vehicle_charging_station') {
+        return Icons.ev_station_rounded;
+      }
+      if (t == 'museum' || t == 'art_gallery') return Icons.museum_rounded;
     }
-    return '📍';
+    return Icons.place_rounded;
   }
 
   /// Builds a URI for Google Maps REST API calls using [Uri.https].

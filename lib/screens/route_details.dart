@@ -15,11 +15,7 @@ import '../utils/map_markers.dart';
 import '../utils/route_prelude.dart';
 import '../widgets/widgets.dart';
 
-/// Displays a full-screen map with the selected route polyline and a
-/// draggable bottom sheet containing turn-by-turn instructions.
-///
-/// Supports both transit and driving modes. The route is fetched from
-/// Google Directions API when the page loads.
+
 class RouteDetailsPage extends StatefulWidget {
   /// Creates a [RouteDetailsPage].
   const RouteDetailsPage({super.key});
@@ -46,12 +42,13 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
   Weather? _weather;
   Comparison? _comparison;
 
-  /// An intermediate stop the user must pass through (e.g. a selected
-  /// from-location) before reaching the final destination. When set, the
-  /// route is: current location → [via] → destination.
+
+  bool _fromParking = false;
+
+  
   Location? _via;
 
-  /// All step infos from Directions API (walking + transit + driving).
+ 
   List<DirectionsStepInfo> _stepInfos = [];
 
   /// All human-readable step instructions.
@@ -102,6 +99,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
     _destination = args['destination'] as Location?;
     _weather = args['weather'] as Weather?;
     _comparison = args['comparison'] as Comparison?;
+    _fromParking = args['fromParking'] as bool? ?? false;
 
     if (_origin == null || _destination == null || _mode == null) {
       setState(() {
@@ -232,7 +230,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
         if (stepPos == null) continue;
 
         final number = i + 1 - _skipOffset;
-        final markerIcon = await getNumberedMarker(number);
+        final markerIcon = await getNumberedMarker(number, size: 24);
         _markers.add(
           Marker(
             markerId: MarkerId('step_$number'),
@@ -478,32 +476,82 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
             },
           ),
 
-          // Back button overlay (top-left).
+          // Back button overlay (top-left) + parking origin reminder.
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12),
-              child: GestureDetector(
-                onTap: () => Navigator.of(context).pop(),
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x1A000000),
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x1A000000),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
                       ),
-                    ],
+                      child: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: AppColors.textPrimary,
+                        size: 20,
+                      ),
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.arrow_back_rounded,
-                    color: AppColors.textPrimary,
-                    size: 20,
-                  ),
-                ),
+                  // Reminds the user the "from" is the parking spot they
+                  // picked in the parking locator.
+                  if (_fromParking && _origin != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x1A000000),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.local_parking_rounded,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'From: ${_origin!.address ?? 'parking spot'}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),

@@ -2,12 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../utils/constants.dart';
 
-/// A titled, card-style section used to group related settings rows.
-///
-/// Mirrors the card treatment used across the app (white background,
-/// rounded corners, hairline border, soft shadow — see
-/// `widgets/cost_comparison_card.dart`) and adds an uppercase eyebrow label
-/// so a long settings list stays scannable.
+
 class SettingsSection extends StatelessWidget {
   /// Creates a [SettingsSection].
   const SettingsSection({

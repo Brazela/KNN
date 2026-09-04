@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../utils/constants.dart';
 
-/// Small shortcut chip for Home, Work, or recent trips.
+/// A compact shortcut chip used on the homepage for quick actions.
 class ShortcutChip extends StatelessWidget {
   /// Creates a [ShortcutChip].
   const ShortcutChip({
@@ -10,27 +10,16 @@ class ShortcutChip extends StatelessWidget {
     required this.label,
     required this.subtitle,
     required this.color,
-    this.onTap,
+    required this.onTap,
     this.onLongPress,
     super.key,
   });
 
-  /// Leading icon.
   final IconData icon;
-
-  /// Primary label.
   final String label;
-
-  /// Secondary label.
   final String subtitle;
-
-  /// Accent color.
   final Color color;
-
-  /// Tap callback.
-  final VoidCallback? onTap;
-
-  /// Long-press callback.
+  final VoidCallback onTap;
   final VoidCallback? onLongPress;
 
   @override
@@ -40,46 +29,34 @@ class ShortcutChip extends StatelessWidget {
         onTap: onTap,
         onLongPress: onLongPress,
         child: Container(
-          height: 72,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.border),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x08000000),
-                blurRadius: 12,
-                offset: Offset(0, 4),
-              ),
-            ],
           ),
           child: Row(
             children: [
               Container(
-                width: 32,
-                height: 32,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, size: 16, color: color),
+                child: Icon(icon, color: color, size: 18),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textPrimary,
-                        height: 1.1,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -88,10 +65,8 @@ class ShortcutChip extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textMuted,
-                        height: 1.1,
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],

@@ -4,12 +4,7 @@ import '../models/models.dart';
 import '../services/services.dart';
 import 'route_step_card.dart';
 
-/// A scrollable list of route steps shared by the route-details and
-/// live-tracking screens.
-///
-/// Renders each step with a numbered badge (matching the numbered map
-/// markers), an icon, description, and duration. Supports highlighting the
-/// current step and ticking off completed steps during an active trip.
+
 class RouteStepList extends StatefulWidget {
   /// Creates a [RouteStepList].
   const RouteStepList({

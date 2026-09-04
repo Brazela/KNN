@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../utils/constants.dart';
 
-/// A color-coded comparison card for transit or driving options.
-///
-/// Displays the title, cost, time, and an expandable list of details.
-/// Tapping the card triggers [onTap] and visually highlights selection.
+
 class ComparisonCard extends StatelessWidget {
   /// Creates a [ComparisonCard].
   const ComparisonCard({

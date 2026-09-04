@@ -6,8 +6,7 @@ import '../models/models.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 
-/// Service responsible for fetching weather forecasts, warnings, and earthquake
-/// reports from data.gov.my.
+
 class WeatherService {
   /// Creates a [WeatherService].
   ///
@@ -101,25 +100,6 @@ class WeatherService {
     }
 
     return nearest ?? 'Kuala Lumpur';
-  }
-
-  /// Fetches active weather warnings from data.gov.my.
-  ///
-  /// Returns a list of [WeatherWarning].
-  /// Throws an exception if the request fails.
-  Future<List<WeatherWarning>> getWarnings() async {
-    final response = await _client.get(Uri.parse(ApiUrls.weatherWarningUrl));
-
-    if (response.statusCode != HttpStatus.ok) {
-      throw Exception(
-        'Failed to fetch weather warnings: ${response.statusCode}',
-      );
-    }
-
-    final data = jsonDecode(response.body) as List<dynamic>;
-    return data
-        .map((json) => WeatherWarning.fromJson(json as Map<String, dynamic>))
-        .toList();
   }
 
   /// Fetches earthquake warnings/reports from data.gov.my.

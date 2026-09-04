@@ -4,11 +4,7 @@ import '../models/models.dart';
 import '../services/services.dart';
 import 'helpers.dart';
 
-/// Computes the polyline split point for a journey that first travels from
-/// the user's current location to their chosen [from] location.
-///
-/// Returns the index of the polyline point nearest to [from] (snapping it to
-/// the nearest road) and that snapped point.
+
 ({int fromPolylineIndex, LatLng snappedFromPoint}) computePreludeSplit({
   required Location from,
   required List<LatLng> polylinePoints,
@@ -33,9 +29,7 @@ import 'helpers.dart';
   return (fromPolylineIndex: fromIndex, snappedFromPoint: snapped);
 }
 
-/// Prepends a synthetic "Go to {fromLabel}" step to the display step lists so
-/// the waypoint (from-location or nearest station) appears as step 1 in the
-/// list and as a numbered pin on the map.
+
 ({List<String> steps, List<DirectionsStepInfo> stepInfos}) buildPreludeSteps({
   required String fromLabel,
   required List<String> steps,

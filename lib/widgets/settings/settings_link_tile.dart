@@ -2,11 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../utils/constants.dart';
 
-/// A single settings row that navigates elsewhere when tapped.
-///
-/// Used for the About section (Privacy Policy, Terms of Use, Contact Us,
-/// Send Feedback) — the `SettingLink` / `TextButton` entry in the Settings
-/// widget list.
+
 class SettingsLinkTile extends StatelessWidget {
   /// Creates a [SettingsLinkTile].
   const SettingsLinkTile({

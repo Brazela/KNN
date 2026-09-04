@@ -9,15 +9,21 @@ class TripCard extends StatelessWidget {
   const TripCard({
     required this.trip,
     required this.onRepeatTrip,
+    this.onSaveRoute,
     super.key,
   });
 
   final Trip trip;
   final VoidCallback onRepeatTrip;
 
+  /// Optional callback to bookmark this trip as a saved route.
+  final VoidCallback? onSaveRoute;
+
   @override
   Widget build(BuildContext context) {
-    final modeIcon = trip.mode == TravelMode.transit ? '🚇' : '🚗';
+    final modeIcon = trip.mode == TravelMode.transit
+        ? Icons.directions_transit_rounded
+        : Icons.directions_car_rounded;
 
     return Container(
       width: double.infinity,
@@ -98,10 +104,7 @@ class TripCard extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              Text(
-                modeIcon,
-                style: const TextStyle(fontSize: 16),
-              ),
+              Icon(modeIcon, size: 16, color: AppColors.textSecondary),
               const SizedBox(width: 6),
               Text(
                 formatCurrency(trip.cost),
@@ -120,9 +123,21 @@ class TripCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
+              if (onSaveRoute != null) ...[
+                IconButton(
+                  onPressed: onSaveRoute,
+                  icon: const Icon(Icons.bookmark_add_outlined, size: 18),
+                  color: AppColors.primary,
+                  tooltip: 'Save route',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  visualDensity: VisualDensity.compact,
+                ),
+                const SizedBox(width: 4),
+              ],
               TextButton.icon(
                 onPressed: onRepeatTrip,
-                icon: const Text('🔄', style: TextStyle(fontSize: 14)),
+                icon: const Icon(Icons.replay_rounded, size: 18),
                 label: const Text(
                   'Repeat Trip',
                   style: TextStyle(

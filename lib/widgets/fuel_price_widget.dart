@@ -6,11 +6,7 @@ import '../navigation/navigation.dart';
 import '../services/services.dart';
 import '../utils/constants.dart';
 
-/// Displays the latest Malaysian fuel prices published by data.gov.my.
-///
-/// Shows RON95, RON97, Diesel (Peninsular & East Malaysia), and any
-/// additional subsidised price tiers when available. Also displays the
-/// effective date of the published prices.
+
 class FuelPriceWidget extends StatefulWidget {
   /// Creates a [FuelPriceWidget].
   const FuelPriceWidget({super.key});
@@ -33,6 +29,9 @@ class _FuelPriceWidgetState extends State<FuelPriceWidget> {
       _loadFuelPrice();
     }
   }
+
+  /// Re-fetches the latest fuel price record.
+  Future<void> refresh() => _loadFuelPrice();
 
   /// Fetches the latest fuel price record.
   Future<void> _loadFuelPrice() async {

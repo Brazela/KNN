@@ -3,64 +3,54 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../screens/screens.dart';
 
-/// Route name constants used throughout the app.
+
 abstract class AppRoutes {
-  /// Home route.
+  
   static const String home = '/';
 
-  /// Search destination route.
+  
   static const String searchDestination = '/search-destination';
 
-  /// Origin selection route.
+  
   static const String originSelection = '/origin-selection';
 
-  /// Transit vs driving comparison route.
+  
   static const String comparison = '/comparison';
 
-  /// Detailed route view.
+  
   static const String routeDetails = '/route-details';
 
-  /// Live vehicle tracking route.
+  
   static const String liveTracking = '/live-tracking';
 
-  /// Trip history route.
+  
   static const String tripHistory = '/trip-history';
 
-  /// Saved favorites route.
+  
   static const String favorites = '/favorites';
 
-  /// Notifications route.
+  
   static const String notifications = '/notifications';
 
-  /// Settings route.
+  
   static const String settings = '/settings';
 
-  /// User profile route.
-  static const String profile = '/profile';
-
-  /// Nearby services route.
+  
   static const String nearbyServices = '/nearby-services';
 
-  /// Saved route detail/comparison route. Requires a [SavedRoute] passed
-  /// as the route's `arguments`.
-  static const String savedRouteComparison = '/saved-route-comparison';
-
-  /// Insights & analytics dashboard route.
-  static const String insightsDashboard = '/insights-dashboard';
-
-  /// Fuel price history route.
+  
   static const String fuelPriceHistory = '/fuel-price-history';
 
-  /// Weather history route.
+  
   static const String weatherHistory = '/weather-history';
 
-  /// Parking locator route.
+  
   static const String parkingLocator = '/parking-locator';
 
-  /// Generates a route for the given [RouteSettings].
-  ///
-  /// Routes that do not yet have a dedicated screen return a placeholder
-  /// "Coming Soon" page so the app remains compilable and navigable.
+  
+  
+  
+  
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     return MaterialPageRoute<dynamic>(
       settings: settings,
@@ -68,15 +58,11 @@ abstract class AppRoutes {
     );
   }
 
-  /// Builds the widget for a named route.
-  ///
-  /// TODO: Replace remaining placeholder pages with real screen
-  /// implementations.
+ 
   static Widget _buildPage(String? name, Object? arguments) {
     switch (name) {
       case home:
-        // Home is provided by the initial route in main.dart.
-        return const _PlaceholderPage(title: 'Home');
+        return const Homepage();
       case searchDestination:
         return SearchDestinationPage(
           initialPlace: arguments is NearbyPlace ? arguments : null,
@@ -101,16 +87,8 @@ abstract class AppRoutes {
         return const NotificationsPage();
       case settings:
         return const SettingsPage();
-      case profile:
-        return const ProfilePage();
       case nearbyServices:
         return const NearbyServicesPage();
-      case savedRouteComparison:
-        return arguments is SavedRoute
-            ? SavedRouteComparisonPage(route: arguments)
-            : const _PlaceholderPage(title: 'Saved Route');
-      case insightsDashboard:
-        return const InsightsDashboardPage();
       case parkingLocator:
         return const ParkingLocatorPage();
       default:
@@ -119,12 +97,12 @@ abstract class AppRoutes {
   }
 }
 
-/// Temporary placeholder page for routes without a dedicated screen.
+
 class _PlaceholderPage extends StatelessWidget {
-  /// Creates a [_PlaceholderPage].
+  
   const _PlaceholderPage({required this.title});
 
-  /// Page title shown in the app bar.
+  
   final String title;
 
   @override

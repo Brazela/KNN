@@ -18,7 +18,8 @@ NearbyPlace _$NearbyPlaceFromJson(Map<String, dynamic> json) => NearbyPlace(
       (json['types'] as List<dynamic>?)?.map((e) => e as String).toList() ??
       const [],
   icon: json['icon'] as String?,
-  photoUrls: (json['photo_urls'] as List<dynamic>?)
+  photoUrls:
+      (json['photo_urls'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList() ??
       const [],

@@ -31,13 +31,19 @@ class _FuelPriceHistoryPageState extends State<FuelPriceHistoryPage> {
       _error = null;
     });
 
+    final service = context.read<FuelPriceService>();
     try {
-      final service = context.read<FuelPriceService>();
-      final history = await service.getFuelPriceHistory();
+      final storage = LocalStorageService();
+      var history = await storage.loadFuelHistory();
+      if (history == null || history.isEmpty) {
+        history = await service.getFuelPriceHistory();
+        await storage.saveFuelHistory(history);
+      }
+      final loaded = history;
 
       if (mounted) {
         setState(() {
-          _history = history;
+          _history = loaded;
           _loading = false;
         });
       }
@@ -51,12 +57,25 @@ class _FuelPriceHistoryPageState extends State<FuelPriceHistoryPage> {
     }
   }
 
+  Future<void> _clearHistory() async {
+    final confirmed = await _showClearDialog(context);
+    if (confirmed != true || !mounted) return;
+    await LocalStorageService().saveFuelHistory([]);
+    if (!mounted) return;
+    setState(() => _history = []);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Fuel Price History'),
         actions: [
+          if (_history.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded),
+              onPressed: _clearHistory,
+            ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: _loading ? null : _fetchHistory,
@@ -124,7 +143,7 @@ class _FuelPriceHistoryPageState extends State<FuelPriceHistoryPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          '📊 Price Trends',
+          'Price Trends',
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
@@ -289,7 +308,7 @@ class _FuelPriceHistoryPageState extends State<FuelPriceHistoryPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          '⛽ Current Prices',
+          'Current Prices',
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
@@ -370,7 +389,7 @@ class _FuelPriceHistoryPageState extends State<FuelPriceHistoryPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          '📅 Price History',
+          'Price History',
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
@@ -526,7 +545,7 @@ class _FuelPriceHistoryPageState extends State<FuelPriceHistoryPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          '💡 Insights',
+          'Insights',
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
@@ -545,7 +564,11 @@ class _FuelPriceHistoryPageState extends State<FuelPriceHistoryPage> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('💡', style: TextStyle(fontSize: 18)),
+              const Icon(
+                Icons.lightbulb_outline_rounded,
+                size: 18,
+                color: Color(0xFF065F46),
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -607,4 +630,36 @@ class _ChangeIndicator extends StatelessWidget {
       ],
     );
   }
+}
+
+Future<bool?> _showClearDialog(BuildContext context) {
+  return showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Text(
+        'Clear saved history?',
+        style: TextStyle(fontWeight: FontWeight.w700),
+      ),
+      content: const Text('This removes the saved fuel price history from '
+          'this device.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.redAccent,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: const Text('Clear'),
+        ),
+      ],
+    ),
+  );
 }

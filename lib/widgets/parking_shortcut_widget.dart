@@ -3,11 +3,7 @@ import 'package:flutter/material.dart';
 import '../navigation/navigation.dart';
 import '../utils/constants.dart';
 
-/// A compact promotional card displayed on the homepage that navigates
-/// to the [ParkingLocatorPage].
-///
-/// Always visible. If no destination is set, the parking page defaults to
-/// the user's current location.
+
 class ParkingShortcutWidget extends StatelessWidget {
   /// Creates a [ParkingShortcutWidget].
   const ParkingShortcutWidget({super.key});

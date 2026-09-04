@@ -2,28 +2,24 @@ import 'package:flutter/material.dart';
 
 import '../utils/constants.dart';
 
-/// Top app bar with logo, notification icon, and profile icon.
+
 class TopBar extends StatelessWidget {
-  /// Creates a [TopBar].
+  
   const TopBar({
     this.onFavoritesTap,
     this.onNearbyServicesTap,
     this.onNotificationTap,
-    this.onProfileTap,
     super.key,
   });
 
-  /// Called when the favorites icon is tapped.
+  
   final VoidCallback? onFavoritesTap;
 
-  /// Called when the nearby services icon is tapped.
+  
   final VoidCallback? onNearbyServicesTap;
 
-  /// Called when the notification icon is tapped.
+  
   final VoidCallback? onNotificationTap;
-
-  /// Called when the profile icon is tapped.
-  final VoidCallback? onProfileTap;
 
   @override
   Widget build(BuildContext context) {
@@ -53,25 +49,20 @@ class TopBar extends StatelessWidget {
           icon: Icons.notifications_outlined,
           onTap: onNotificationTap,
         ),
-        const SizedBox(width: 8),
-        _IconButton(
-          icon: Icons.person_outline_rounded,
-          onTap: onProfileTap,
-        ),
       ],
     );
   }
 }
 
-/// Small circular icon button used in the top bar.
+
 class _IconButton extends StatelessWidget {
-  /// Creates an [_IconButton].
+  
   const _IconButton({required this.icon, this.onTap});
 
-  /// Icon to display.
+  
   final IconData icon;
 
-  /// Tap callback.
+  
   final VoidCallback? onTap;
 
   @override

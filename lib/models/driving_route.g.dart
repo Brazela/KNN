@@ -9,7 +9,7 @@ part of 'driving_route.dart';
 DrivingRoute _$DrivingRouteFromJson(Map<String, dynamic> json) => DrivingRoute(
   distanceMeters: (json['distance_meters'] as num).toInt(),
   durationSeconds: (json['duration_seconds'] as num).toInt(),
-  tolls: (json['tolls'] as num).toDouble(),
+  tolls: (json['tolls'] as num?)?.toDouble() ?? 0.0,
   fuelCost: (json['fuel_cost'] as num).toDouble(),
   steps:
       (json['steps'] as List<dynamic>?)?.map((e) => e as String).toList() ??

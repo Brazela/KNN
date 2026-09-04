@@ -30,36 +30,6 @@ Map<String, dynamic> _$WeatherToJson(Weather instance) => <String, dynamic>{
   'max_temp': instance.maxTemp,
 };
 
-WeatherWarning _$WeatherWarningFromJson(Map<String, dynamic> json) =>
-    WeatherWarning(
-      issued: json['issued'] as String,
-      titleEn: json['title_en'] as String,
-      titleBm: json['title_bm'] as String,
-      validFrom: json['valid_from'] as String,
-      validTo: json['valid_to'] as String,
-      headingEn: json['heading_en'] as String,
-      textEn: json['text_en'] as String,
-      instructionEn: json['instruction_en'] as String,
-      headingBm: json['heading_bm'] as String,
-      textBm: json['text_bm'] as String,
-      instructionBm: json['instruction_bm'] as String,
-    );
-
-Map<String, dynamic> _$WeatherWarningToJson(WeatherWarning instance) =>
-    <String, dynamic>{
-      'issued': instance.issued,
-      'title_en': instance.titleEn,
-      'title_bm': instance.titleBm,
-      'valid_from': instance.validFrom,
-      'valid_to': instance.validTo,
-      'heading_en': instance.headingEn,
-      'text_en': instance.textEn,
-      'instruction_en': instance.instructionEn,
-      'heading_bm': instance.headingBm,
-      'text_bm': instance.textBm,
-      'instruction_bm': instance.instructionBm,
-    };
-
 EarthquakeWarning _$EarthquakeWarningFromJson(Map<String, dynamic> json) =>
     EarthquakeWarning(
       issued: json['issued'] as String,

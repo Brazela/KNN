@@ -23,6 +23,7 @@ class WeatherWidget extends StatefulWidget {
 class _WeatherWidgetState extends State<WeatherWidget> {
   Weather? _weather;
   bool _loading = false;
+  String? _error;
 
   @override
   void didChangeDependencies() {
@@ -33,10 +34,22 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     }
   }
 
+  /// Re-fetches the current day's weather forecast.
+  Future<void> refresh() async {
+    final location = context.read<TripProvider>().currentLocation;
+    if (location == null) return;
+    setState(() {
+      _weather = null;
+      _error = null;
+    });
+    await _loadWeather(location);
+  }
+
   /// Fetches the current day's weather forecast.
   Future<void> _loadWeather(Location location) async {
     setState(() {
       _loading = true;
+      _error = null;
     });
 
     try {
@@ -56,12 +69,78 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       if (mounted) {
         setState(() {
           _loading = false;
+          _error = e.toString();
         });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to load weather: $e')));
       }
     }
+  }
+
+  /// Error state with retry button.
+  Widget _buildError() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEE2E2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.cloud_off_rounded,
+              color: Color(0xFFDC2626),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Weather unavailable',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 32,
+            child: TextButton(
+              onPressed: _loading ? null : refresh,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                backgroundColor: const Color(0xFFF3F4F6),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Retry',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Maps a Malay weather summary keyword to a representative emoji.
@@ -95,6 +174,10 @@ class _WeatherWidgetState extends State<WeatherWidget> {
         ),
         child: const Center(child: CircularProgressIndicator()),
       );
+    }
+
+    if (_weather == null && _error != null) {
+      return _buildError();
     }
 
     if (_weather == null) {

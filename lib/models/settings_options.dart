@@ -10,16 +10,16 @@ enum AppLanguage {
   final String displayName;
 }
 
-/// Default travel mode used to pre-select a recommendation when a
-/// comparison first loads.
+/// Default travel mode used to pre-select what a comparison should
+/// optimise for.
 ///
-/// [fastest] matches the mockup's default selected value and pairs with
-/// this app's rules-based recommendation engine (recommend whichever mode
-/// is quicker, unless a stronger signal like heavy rain overrides it).
+/// [fastest]/[cheapest] map directly onto what this app is actually for —
+/// trading time against money when comparing transit vs driving — so the
+/// user picks which one they'd rather default to: get there quickly
+/// regardless of cost, or spend as little as possible regardless of time.
 enum DefaultTravelMode {
   fastest('Fastest'),
-  transit('Transit'),
-  driving('Driving');
+  cheapest('Cheapest');
 
   const DefaultTravelMode(this.displayName);
 

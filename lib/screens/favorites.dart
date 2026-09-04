@@ -4,14 +4,20 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../navigation/navigation.dart';
 import '../providers/providers.dart';
+import '../services/services.dart';
 import '../utils/constants.dart';
 import '../widgets/widgets.dart';
 
 /// Favorites page — saved Home/Work locations and bookmarked routes.
 ///
-/// UI-mockup implementation: [_favorites] and [_savedRoutes] are seeded
-/// with local, in-memory dummy data. Nothing is persisted yet; this is
-/// tracked as the Local Database module.
+/// Persisted via [LocalStorageService] (simple phone storage, per the
+/// team's decision — not a full database). On first run, before anything
+/// has been saved, the page seeds itself with the dummy data below and
+/// immediately persists it, so the same data is there on the next launch
+/// too. Saved Routes have no "add new" flow yet in this app (they're only
+/// ever created by saving one from a comparison elsewhere), so only the
+/// dummy seed and whatever gets added there will ever populate that list —
+/// this page only edits/deletes/loads/saves it.
 class FavoritesPage extends StatefulWidget {
   /// Creates a [FavoritesPage].
   const FavoritesPage({super.key});
@@ -21,10 +27,37 @@ class FavoritesPage extends StatefulWidget {
 }
 
 class _FavoritesPageState extends State<FavoritesPage> {
-  List<FavoriteLocation> _favorites = _dummyFavorites();
-  final List<SavedRoute> _savedRoutes = _dummySavedRoutes();
+  final _storage = LocalStorageService();
 
-  // --- Dummy data ---------------------------------------------------------
+  List<FavoriteLocation> _favorites = [];
+  List<SavedRoute> _savedRoutes = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  /// Loads persisted favorites/saved routes, falling back to the dummy
+  /// seed data (and persisting it immediately) on first run.
+  Future<void> _loadData() async {
+    final storedFavorites = await _storage.loadFavorites();
+    final storedRoutes = await _storage.loadSavedRoutes();
+    if (!mounted) return;
+
+    setState(() {
+      _favorites = storedFavorites ?? _dummyFavorites();
+      _savedRoutes = storedRoutes ?? _dummySavedRoutes();
+      _isLoading = false;
+    });
+
+    // First run: nothing was in storage yet, so persist the seed data now.
+    if (storedFavorites == null) await _storage.saveFavorites(_favorites);
+    if (storedRoutes == null) await _storage.saveSavedRoutes(_savedRoutes);
+  }
+
+  // --- Dummy seed data -----------------------------------------------------
 
   static List<FavoriteLocation> _dummyFavorites() => const [
         FavoriteLocation(
@@ -96,6 +129,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
     final result = await _showEditFavoriteDialog(context);
     if (result == null || !mounted) return;
     setState(() => _favorites = [..._favorites, result]);
+    await _storage.saveFavorites(_favorites);
   }
 
   Future<void> _editFavorite(FavoriteLocation favorite) async {
@@ -107,6 +141,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
         for (final f in _favorites) if (f.id == result.id) result else f,
       ];
     });
+    await _storage.saveFavorites(_favorites);
   }
 
   Future<void> _deleteFavorite(FavoriteLocation favorite) async {
@@ -119,6 +154,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
     setState(() {
       _favorites = _favorites.where((f) => f.id != favorite.id).toList();
     });
+    await _storage.saveFavorites(_favorites);
   }
 
   /// Hands the route off to [TripProvider] and opens the Comparison page —
@@ -134,6 +170,14 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: _addFavorite,

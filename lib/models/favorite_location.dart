@@ -1,4 +1,8 @@
+import 'package:json_annotation/json_annotation.dart';
+
 import 'location.dart';
+
+part 'favorite_location.g.dart';
 
 /// The role a [FavoriteLocation] plays in the user's daily commute.
 ///
@@ -18,11 +22,12 @@ enum FavoriteLocationType {
 
 /// A single saved place shown on the Favorites page.
 ///
-/// This is a plain, immutable value type for the current UI-mockup phase.
-/// It intentionally does *not* implement `@JsonSerializable()` yet, since no
-/// persistence layer exists — but its shape mirrors [Location] closely so it
-/// can adopt the same `json_annotation` pattern once the Local Database
-/// module is implemented.
+/// Now persisted via `services/local_storage_service.dart` — the
+/// `@JsonSerializable()` annotation and generated `favorite_location.g.dart`
+/// (run `flutter pub run build_runner build --delete-conflicting-outputs`
+/// after adding this file) follow the exact same pattern already used by
+/// [Location] in `models/location.dart`.
+@JsonSerializable()
 class FavoriteLocation {
   /// Creates a [FavoriteLocation].
   const FavoriteLocation({
@@ -32,10 +37,11 @@ class FavoriteLocation {
     required this.location,
   });
 
+  /// Creates a [FavoriteLocation] from decoded JSON.
+  factory FavoriteLocation.fromJson(Map<String, dynamic> json) =>
+      _$FavoriteLocationFromJson(json);
+
   /// Unique identifier.
-  ///
-  /// Generated client-side for this mockup phase; replace with the local
-  /// database's primary key once persistence is implemented.
   final String id;
 
   /// Which role this favorite plays (drives icon/colour choice in the UI).
@@ -46,6 +52,9 @@ class FavoriteLocation {
 
   /// Geographic location and address for this favorite.
   final Location location;
+
+  /// Converts this favorite to a JSON-compatible map.
+  Map<String, dynamic> toJson() => _$FavoriteLocationToJson(this);
 
   /// Returns a copy of this favorite with the given fields replaced.
   ///

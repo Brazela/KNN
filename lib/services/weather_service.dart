@@ -16,6 +16,12 @@ class WeatherService {
 
   final http.Client _client;
 
+  /// Simple in-memory cache keyed by location coordinates.
+  ///
+  /// Avoids refetching the same forecast when the user swaps between
+  /// saved locations or revisits a searched location.
+  final Map<String, _ForecastCacheEntry> _forecastCache = {};
+
   /// Hardcoded lookup of major Malaysian district coordinates.
   ///
   /// The data.gov.my forecast API returns forecasts by district name without
@@ -58,7 +64,23 @@ class WeatherService {
   ///
   /// Returns a list of [Weather] forecasts starting from today.
   /// Throws an exception if the request fails.
-  Future<List<Weather>> getForecast(double latitude, double longitude) async {
+  Future<List<Weather>> getForecast(
+    double latitude,
+    double longitude, {
+    bool useCache = true,
+  }) async {
+    final cacheKey =
+        '${latitude.toStringAsFixed(4)},${longitude.toStringAsFixed(4)}';
+
+    if (useCache) {
+      final cached = _forecastCache[cacheKey];
+      if (cached != null &&
+          DateTime.now().difference(cached.fetchedAt).inMinutes < 10) {
+        return cached.data;
+      }
+    }
+
+    final districtName = _findNearestDistrict(latitude, longitude);
     final response = await _client.get(Uri.parse(ApiUrls.weatherForecastUrl));
 
     if (response.statusCode != HttpStatus.ok) {
@@ -72,13 +94,17 @@ class WeatherService {
         .map((json) => Weather.fromJson(json as Map<String, dynamic>))
         .toList();
 
-    final districtName = _findNearestDistrict(latitude, longitude);
-
     final seen = <String>{};
-    return allForecasts
+    final result = allForecasts
         .where((forecast) => forecast.locationName == districtName)
         .where((forecast) => seen.add(forecast.date))
         .toList();
+    result.sort((a, b) => a.date.compareTo(b.date));
+    if (useCache) {
+      _forecastCache[cacheKey] =
+          _ForecastCacheEntry(data: result, fetchedAt: DateTime.now());
+    }
+    return result;
   }
 
   /// Finds the nearest known district name to the given coordinates.
@@ -235,4 +261,10 @@ class WeatherService {
     }
     return [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
   }
+}
+
+class _ForecastCacheEntry {
+  const _ForecastCacheEntry({required this.data, required this.fetchedAt});
+  final List<Weather> data;
+  final DateTime fetchedAt;
 }

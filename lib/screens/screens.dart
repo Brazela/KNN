@@ -7,4 +7,5 @@ export 'route_details.dart';
 export 'search_destination.dart';
 export 'trip_history.dart';
 export 'fuel_price_history.dart';
+export 'location_picker_page.dart';
 export 'weather_history_page.dart';

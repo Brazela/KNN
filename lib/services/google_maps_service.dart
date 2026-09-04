@@ -159,7 +159,11 @@ class GoogleMapsService {
       final status = data['status'] as String? ?? 'UNKNOWN_ERROR';
 
       if (status != 'OK') {
-        throw Exception('Google Distance Matrix API error: $status');
+        final errorMessage = data['error_message'] as String?;
+        throw Exception(
+          'Google Distance Matrix API error: $status'
+          '${errorMessage != null ? ' — $errorMessage' : ''}',
+        );
       }
 
       final rows = data['rows'] as List<dynamic>;

@@ -23,16 +23,18 @@ bool isSameLocation(Location a, Location b) {
 }
 
 bool isInMalaysia(Location location) {
-  final address = location.address;
-  if (address != null && address.trim().isNotEmpty) {
-    return address.toLowerCase().contains('malaysia');
-  }
   final lat = location.latitude;
   final lng = location.longitude;
   final inPeninsular = lat >= 1.0 && lat <= 6.7 && lng >= 99.6 && lng <= 104.6;
   final inEastMalaysia =
       lat >= 0.85 && lat <= 7.4 && lng >= 109.5 && lng <= 119.4;
-  return inPeninsular || inEastMalaysia;
+  if (inPeninsular || inEastMalaysia) return true;
+
+  final address = location.address;
+  if (address != null && address.trim().isNotEmpty) {
+    return address.toLowerCase().contains('malaysia');
+  }
+  return false;
 }
 
 double calculateDistance(

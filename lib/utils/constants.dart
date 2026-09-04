@@ -49,7 +49,10 @@ abstract class ApiUrls {
 
 abstract class GoogleMapsConfig {
 
-  static const String apiKey = 'AIzaSyCwHiN8ZHF35vGGxYfvid1mR_bD_6Ay1zk';
+  static const String apiKey = String.fromEnvironment(
+    'GOOGLE_MAPS_API_KEY',
+    defaultValue: 'AIzaSyCwHiN8ZHF35vGGxYfvid1mR_bD_6Ay1zk',
+  );
 }
 
 abstract class AppColors {

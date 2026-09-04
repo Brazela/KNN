@@ -6,7 +6,6 @@ import '../models/models.dart';
 import '../navigation/navigation.dart';
 import '../services/services.dart';
 import '../utils/constants.dart';
-import '../utils/helpers.dart';
 import '../utils/parking_utils.dart';
 import 'search_destination.dart';
 
@@ -123,26 +122,13 @@ class _ParkingLocatorPageState extends State<ParkingLocatorPage> {
       currentLoc = null;
     }
 
-    final nearParking = currentLoc != null &&
-        calculateDistance(
-              currentLoc.latitude,
-              currentLoc.longitude,
-              spot.latitude,
-              spot.longitude,
-            ) <
-            0.1;
-
-    final origin =
-        (currentLoc != null && !nearParking) ? currentLoc : parkingLoc;
-    final via = (currentLoc != null && !nearParking) ? parkingLoc : null;
-
     if (!mounted) return;
     Navigator.of(context).pushNamed(
       AppRoutes.routeDetails,
       arguments: <String, dynamic>{
         'mode': TravelMode.driving,
-        'origin': origin,
-        'via': via,
+        'origin': currentLoc ?? parkingLoc,
+        'via': currentLoc != null ? parkingLoc : null,
         'destination': dest,
         'fromParking': true,
       },

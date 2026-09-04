@@ -7,19 +7,28 @@
         {
             "name": "KNN",
             "request": "launch",
-            "type": "dart"
+            "type": "dart",
+            "args": [
+                "--dart-define=GOOGLE_MAPS_API_KEY=AIzaSyCwHiN8ZHF35vGGxYfvid1mR_bD_6Ay1zk"
+            ]
         },
         {
             "name": "KNN (profile mode)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "profile"
+            "flutterMode": "profile",
+            "args": [
+                "--dart-define=GOOGLE_MAPS_API_KEY=AIzaSyCwHiN8ZHF35vGGxYfvid1mR_bD_6Ay1zk"
+            ]
         },
         {
             "name": "KNN (release mode)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "release"
+            "flutterMode": "release",
+            "args": [
+                "--dart-define=GOOGLE_MAPS_API_KEY=AIzaSyCwHiN8ZHF35vGGxYfvid1mR_bD_6Ay1zk"
+            ]
         }
     ]
 }

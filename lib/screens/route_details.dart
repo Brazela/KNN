@@ -364,26 +364,28 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
       }
     }
 
-    context.read<TripProvider>().addRecentTrip(
-      Trip(
-        id: id,
-        origin: _origin!,
-        destination: _destination!,
-        mode: _mode!,
-        cost: cost,
-        timeMinutes: timeMinutes,
-        date: DateTime.now(),
-        weather: _weather,
-        transitCost: transitCost,
-        transitTime: transitTime,
-        drivingCost: drivingCost,
-        drivingTime: drivingTime,
-        recommendedMode: recommendedMode,
-        followedRecommendation: followed,
-        savingsCost: savingsCost,
-        savingsTime: savingsTime,
-      ),
-    );
+    if (!_fromParking) {
+      context.read<TripProvider>().addRecentTrip(
+        Trip(
+          id: id,
+          origin: _origin!,
+          destination: _destination!,
+          mode: _mode!,
+          cost: cost,
+          timeMinutes: timeMinutes,
+          date: DateTime.now(),
+          weather: _weather,
+          transitCost: transitCost,
+          transitTime: transitTime,
+          drivingCost: drivingCost,
+          drivingTime: drivingTime,
+          recommendedMode: recommendedMode,
+          followedRecommendation: followed,
+          savingsCost: savingsCost,
+          savingsTime: savingsTime,
+        ),
+      );
+    }
 
     Navigator.of(context).pushNamed(
       AppRoutes.liveTracking,
@@ -401,6 +403,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> {
         'fromPolylineIndex': _fromPolylineIndex,
         'snappedFromPoint': _snappedFromPoint,
         'preludeLabel': _preludeLabel,
+        'fromParking': _fromParking,
       },
     );
   }

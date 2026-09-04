@@ -52,6 +52,8 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
 
   String? _preludeLabel;
 
+  bool _fromParking = false;
+
   int get _skipOffset =>
       _snappedFromPoint != null ? 0 : (_mode == TravelMode.driving ? 1 : 0);
 
@@ -83,6 +85,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
     _fromPolylineIndex = args['fromPolylineIndex'] as int? ?? 0;
     _snappedFromPoint = args['snappedFromPoint'] as LatLng?;
     _preludeLabel = args['preludeLabel'] as String?;
+    _fromParking = args['fromParking'] as bool? ?? false;
 
     if (_origin == null || _destination == null || _mode == null) {
       setState(() => _statusMessage = 'Missing trip data');
@@ -794,13 +797,14 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
                   onTap: _shareEta,
                 ),
               ),
-              Expanded(
-                child: _ActionButton(
-                  icon: Icons.alt_route_rounded,
-                  label: 'Alternative',
-                  onTap: _alternativeRoute,
+              if (!_fromParking)
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.alt_route_rounded,
+                    label: 'Alternative',
+                    onTap: _alternativeRoute,
+                  ),
                 ),
-              ),
               Expanded(
                 child: _ActionButton(
                   icon: Icons.cancel_rounded,

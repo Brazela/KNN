@@ -91,12 +91,13 @@ class _WeatherHistoryPageState extends State<WeatherHistoryPage> {
   Future<void> _loadWarningsWithPersistence() async {
     setState(() => _loadingWarnings = true);
 
+    final service = context.read<WeatherService>();
+
     // Always load persisted warnings first (safe outside try-catch)
     final stored = await _readStoredWarnings();
 
     try {
       // Fetch live warnings
-      final service = context.read<WeatherService>();
       final live = await service.getWarnings();
 
       // Merge: add live warnings not already in stored (by issued timestamp)

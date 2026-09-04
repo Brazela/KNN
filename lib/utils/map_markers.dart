@@ -78,7 +78,7 @@ Future<BitmapDescriptor> getNumberedMarker(
   final picture = recorder.endRecording();
   final image = await picture.toImage(canvasSize, canvasSize);
   final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-  final descriptor = BitmapDescriptor.fromBytes(
+  final descriptor = BitmapDescriptor.bytes(
     bytes!.buffer.asUint8List(),
   );
 
@@ -201,7 +201,7 @@ Future<BitmapDescriptor> getVehicleMarker(
   final picture = recorder.endRecording();
   final image = await picture.toImage(canvasSize, canvasSize);
   final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-  final descriptor = BitmapDescriptor.fromBytes(
+  final descriptor = BitmapDescriptor.bytes(
     bytes!.buffer.asUint8List(),
   );
 

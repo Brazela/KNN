@@ -212,6 +212,7 @@ class _ParkingLocatorPageState extends State<ParkingLocatorPage> {
                 color: AppColors.primary),
             tooltip: 'Use my location',
             onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
               try {
                 final loc =
                     await context.read<LocationService>().getCurrentLocation();
@@ -225,7 +226,7 @@ class _ParkingLocatorPageState extends State<ParkingLocatorPage> {
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     SnackBar(content: Text('Location error: $e')),
                   );
                 }

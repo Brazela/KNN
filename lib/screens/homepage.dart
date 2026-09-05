@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../navigation/navigation.dart';
 import '../providers/providers.dart';
@@ -17,12 +18,35 @@ class Homepage extends StatefulWidget {
   State<Homepage> createState() => _HomepageState();
 }
 
-class _HomepageState extends State<Homepage> {
+class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
+  static const _permissionsPromptedKey = 'permissions_prompted';
+
   final int _bottomNavIndex = 0;
   bool _locationChecked = false;
+  bool _awaitingSettingsReturn = false;
   int _refreshTick = 0;
   final GlobalKey<RefreshIndicatorState> _refreshKey =
       GlobalKey<RefreshIndicatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _awaitingSettingsReturn) {
+      _awaitingSettingsReturn = false;
+      _checkLocationPermission();
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -36,48 +60,90 @@ class _HomepageState extends State<Homepage> {
   Future<void> _checkLocationPermission() async {
     final locationService = context.read<LocationService>();
     final tripProvider = context.read<TripProvider>();
+    final notificationService = context.read<NotificationService>();
+
+    final permission = await _acquireLocationPermission(locationService);
+    if (permission == null) {
+      return;
+    }
 
     try {
-      final permission = await locationService.requestPermission();
-
-      if (permission == LocationPermission.deniedForever) {
-        if (!mounted) return;
-        await LocationPermissionDialog.show(
-          context,
-          onAllow: () => Geolocator.openAppSettings(),
-        );
-        return;
-      }
-
-      if (permission == LocationPermission.denied) {
-        if (!mounted) return;
-        await LocationPermissionDialog.show(
-          context,
-          onAllow: () async {
-            try {
-              final loc = await locationService.getCurrentLocation();
-              if (mounted) tripProvider.setCurrentLocation(loc);
-            } catch (e) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Could not get location: $e')),
-                );
-              }
-            }
-          },
-        );
-        return;
-      }
-
       final loc = await locationService.getCurrentLocation();
       if (mounted) tripProvider.setCurrentLocation(loc);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Location error: $e')),
+          SnackBar(content: Text('Could not get location: $e')),
         );
       }
     }
+
+    await _requestNotificationPermissionIfFirstUse(notificationService);
+  }
+
+  Future<LocationPermission?> _acquireLocationPermission(
+    LocationService locationService,
+  ) async {
+    while (true) {
+      if (!mounted) return null;
+
+      LocationPermission permission;
+      try {
+        permission = await locationService.requestPermission();
+      } catch (e) {
+        if (!mounted) return null;
+        _awaitingSettingsReturn = true;
+        await LocationPermissionDialog.show(
+          context,
+          title: 'Enable location services',
+          message: 'Please turn on location services to continue.',
+          allowLabel: 'Open settings',
+          onAllow: () => Geolocator.openLocationSettings(),
+          showSkip: false,
+        );
+        return null;
+      }
+
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        return permission;
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (!mounted) return null;
+        _awaitingSettingsReturn = true;
+        await LocationPermissionDialog.show(
+          context,
+          title: 'Location permission required',
+          message:
+              'Location permission is permanently denied. Please allow it in settings to continue.',
+          allowLabel: 'Open settings',
+          onAllow: () => Geolocator.openAppSettings(),
+          showSkip: false,
+        );
+        return null;
+      }
+
+      if (!mounted) return null;
+      await LocationPermissionDialog.show(
+        context,
+        title: 'Location permission required',
+        message: 'Please allow location access to continue using KNN Commute.',
+        showSkip: false,
+      );
+    }
+  }
+
+  Future<void> _requestNotificationPermissionIfFirstUse(
+    NotificationService notificationService,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final alreadyPrompted = prefs.getBool(_permissionsPromptedKey) ?? false;
+    if (alreadyPrompted) return;
+
+    await prefs.setBool(_permissionsPromptedKey, true);
+
+    await notificationService.requestPermission();
   }
 
   Future<void> _onRefresh() async {

@@ -20,7 +20,6 @@ Future<void> main() async {
     frequency: const Duration(hours: 6),
     existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
   );
-  unawaited(notificationService.requestPermission());
   unawaited(runNotificationCheck());
   unawaited(syncHistory());
   runApp(KNNApp(notificationService: notificationService));
